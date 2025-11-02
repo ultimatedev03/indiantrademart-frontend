@@ -204,7 +204,7 @@ const DirectoryPage: React.FC<DirectoryPageProps> = ({
   const hasSearched = currentFilters.query || currentFilters.location;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20">
       <div className="container mx-auto px-4 py-8">
         {/* Search Section */}
         <div className="mb-8">

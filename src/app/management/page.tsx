@@ -30,21 +30,7 @@ export default function ManagementLandingPage() {
   }, [isAuthenticated, user, router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-              M
-            </div>
-            <span className="font-semibold text-gray-900">iTech Management Portal</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">Back to Home</Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 pt-20">
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-4 py-16 sm:py-24">
@@ -240,12 +226,6 @@ export default function ManagementLandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-8 border-t border-gray-800">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p>&copy; 2025 iTech Marketplace. Management Portal. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 }
