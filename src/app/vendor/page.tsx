@@ -33,15 +33,15 @@ export default function VendorLandingPage() {
               Get verified, list your products, and start selling today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/auth/vendor/signup" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-center">
+              <Link href="/auth/vendor/register" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-center">
                 Create Account
               </Link>
               <Link href="/auth/vendor/login" className="px-6 py-3 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 font-medium text-center">
-                Sign In
+                Login
               </Link>
             </div>
             <p className="text-sm text-gray-500 mt-6">
-              New to iTech? <Link href="/auth/vendor/signup" className="text-green-600 hover:underline font-semibold">Create an account</Link> to get started
+              New to iTech? <Link href="/auth/vendor/register" className="text-green-600 hover:underline font-semibold">Create an account</Link> to get started
             </p>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-white">
@@ -134,11 +134,11 @@ export default function VendorLandingPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Start Selling?</h2>
           <p className="text-lg text-gray-600 mb-8">Join thousands of vendors making more money on iTech</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/vendor/signup" className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+            <Link href="/auth/vendor/register" className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
               Create Free Account
             </Link>
             <Link href="/auth/vendor/login" className="px-8 py-3 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 font-semibold">
-              Sign In
+              Login
             </Link>
           </div>
         </div>

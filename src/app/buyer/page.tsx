@@ -33,15 +33,15 @@ export default function BuyerLandingPage() {
               Get competitive quotes, track orders, and manage your supply chain efficiently.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/auth/user/signup" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-center">
+              <Link href="/auth/user/register" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-center">
                 Create Account
               </Link>
               <Link href="/auth/user/login" className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium text-center">
-                Sign In
+                Login
               </Link>
             </div>
             <p className="text-sm text-gray-500 mt-6">
-              New here? <Link href="/auth/user/signup" className="text-blue-600 hover:underline font-semibold">Create a free account</Link> to start shopping
+              New here? <Link href="/auth/user/register" className="text-blue-600 hover:underline font-semibold">Create a free account</Link> to start shopping
             </p>
           </div>
           <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-8 text-white">
@@ -169,11 +169,11 @@ export default function BuyerLandingPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Start Sourcing Today</h2>
           <p className="text-lg text-gray-600 mb-8">Join thousands of buyers finding suppliers on iTech</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/user/signup" className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+            <Link href="/auth/user/register" className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
               Create Free Account
             </Link>
             <Link href="/auth/user/login" className="px-8 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-semibold">
-              Sign In
+              Login
             </Link>
           </div>
         </div>
