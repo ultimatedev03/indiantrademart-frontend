@@ -1,0 +1,10 @@
+.git
+.gitignore
+npm-debug.log
+.env
+.env.local
+.idea
+.vscode
+*.log
+.DS_Store
+src/
