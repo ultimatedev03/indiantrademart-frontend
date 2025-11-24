@@ -1,14 +1,14 @@
-// middleware.ts - Correct for YOUR folder structure
+// middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const ROOT_DOMAIN = 'indiantrademart.com';
 
 const VALID_SUBDOMAINS: Record<string, string> = {
-  vendor: '/vendor',
+  vendor: '/auth/vendor',
   dir: '/directory',
-  user: '/user',
-  man: '/management',
-  employee: '/employee',
+  user: '/auth/user',
+  man: '/auth/management',
+  employee: '/auth/employee',
 };
 
 export function middleware(req: NextRequest) {
@@ -24,7 +24,7 @@ export function middleware(req: NextRequest) {
   if (parts.length > 1) {
     const subdomain = parts[0];
 
-    if (Object.prototype.hasOwnProperty.call(VALID_SUBDOMAINS, subdomain)) {
+    if (subdomain in VALID_SUBDOMAINS) {
       const url = req.nextUrl.clone();
       const basePath = VALID_SUBDOMAINS[subdomain];
 
@@ -44,5 +44,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|_next/data|favicon.ico|robots.txt|sitemap.xml).*)',
+  ],
 };
