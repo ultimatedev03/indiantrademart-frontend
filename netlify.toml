@@ -1,18 +1,17 @@
-# ✅ Netlify config for Next.js with middleware support
+# ✅ Netlify config for Next.js with middleware and subdomains
 
 [build]
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
   NEXT_TELEMETRY_DISABLED = "1"
 
-# ✅ Enable Next.js middleware and routing
+# ✅ Enable Next.js runtime + middleware support
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# ✅ Security headers
+# ✅ Security headers (optional but safe)
 [[headers]]
   for = "/*"
   [headers.values]
@@ -21,12 +20,12 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# ✅ Cache static assets
+# ✅ Cache static files
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# ✅ Functions (optional but safe)
+# ✅ Function bundling
 [functions]
   node_bundler = "esbuild"

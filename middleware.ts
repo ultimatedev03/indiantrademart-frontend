@@ -1,14 +1,14 @@
-// middleware.ts - Corrected for indiantrademart.com and proper subdomain routing
+// middleware.ts - Correct for YOUR folder structure
 import { NextRequest, NextResponse } from 'next/server';
 
 const ROOT_DOMAIN = 'indiantrademart.com';
 
 const VALID_SUBDOMAINS: Record<string, string> = {
-  vendor: '/auth/vendor',
+  vendor: '/vendor',
   dir: '/directory',
-  user: '/auth/user',
-  man: '/auth/management',
-  employee: '/auth/employee', // ✅ added
+  user: '/user',
+  man: '/management',
+  employee: '/employee',
 };
 
 export function middleware(req: NextRequest) {
@@ -26,7 +26,7 @@ export function middleware(req: NextRequest) {
 
     if (Object.prototype.hasOwnProperty.call(VALID_SUBDOMAINS, subdomain)) {
       const url = req.nextUrl.clone();
-      const basePath = VALID_SUBDOMAINS[subdomain as keyof typeof VALID_SUBDOMAINS];
+      const basePath = VALID_SUBDOMAINS[subdomain];
 
       if (url.pathname === '/' || url.pathname === '') {
         url.pathname = `${basePath}/login`;
