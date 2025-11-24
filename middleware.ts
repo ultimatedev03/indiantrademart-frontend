@@ -4,12 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 const ROOT_DOMAIN = 'indiantrademart.com';
 
 const VALID_SUBDOMAINS: Record<string, string> = {
-  vendor: '/auth/vendor',
+  vendor: '/vendor',
   dir: '/directory',
-  user: '/auth/user',
-  man: '/auth/management',
-  employee: '/auth/employee',
+  user: '/user',
+  man: '/management',
+  employee: '/employee',
 };
+
 
 export function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
