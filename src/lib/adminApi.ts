@@ -25,14 +25,14 @@ export interface TopSellingProduct {
 
 export const adminStatsAPI = {
   getDashboardStats: async (): Promise<AdminStats> => {
-    const response = await api.get('/api/admin/stats');
+    const response = await api.get<AdminStats>('/api/admin/stats');
     return response.data;
   },
 };
 
 export const adminProductAPI = {
   getTopSellingProducts: async (): Promise<TopSellingProduct[]> => {
-    const response = await api.get('/api/admin/products/top-selling');
+    const response = await api.get<TopSellingProduct[]>('/api/admin/products/top-selling');
     return response.data;
   },
 };

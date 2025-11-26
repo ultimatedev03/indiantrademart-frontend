@@ -10,6 +10,8 @@ export { default as CategoryTable } from './components/CategoryTable';
 export { default as LocationTable } from './components/LocationTable';
 export { default as VendorOnboarding } from './components/VendorOnboarding';
 export { default as VendorKycReview } from './components/VendorKycReview';
+export { default as EmployeeSupportManagement } from './components/EmployeeSupportManagement';
+export { default as EmployeeFinanceManagement } from './components/EmployeeFinanceManagement';
 
 // Services
 export * from './services/employeeApi';

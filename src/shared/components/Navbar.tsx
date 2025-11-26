@@ -22,7 +22,7 @@ export default function Navbar() {
   // Make role checking case-insensitive and flexible
   const userRole = user?.role?.toLowerCase() || '';
   const isAdmin = userRole === 'admin' || userRole === 'role_admin';
-  const isVendor = userRole === 'vendor' || userRole === 'role_vendor';
+  const isVendor = userRole === 'vendor' || userRole === 'role_vendor' || userRole === 'seller' || userRole === 'role_seller';
   const isUser = userRole === 'user' || userRole === 'buyer' || userRole === 'role_user';
   
   // Debug user role
@@ -185,7 +185,7 @@ export default function Navbar() {
                             <button
                               onClick={() => {
                                 setUserDropdownOpen(false);
-                                router.push('/dashboard/admin');
+                                router.push('/management');
                               }}
                               className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                             >

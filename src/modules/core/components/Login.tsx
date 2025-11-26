@@ -26,6 +26,7 @@ const Login: React.FC<LoginProps> = ({
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error, otpSent, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const [dashboardRole, setDashboardRole] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState({
     emailOrPhone: '',
@@ -33,11 +34,21 @@ const Login: React.FC<LoginProps> = ({
   });
   const [otpCode, setOtpCode] = React.useState('');
 
+  // Get dashboard role from localStorage after login
+  React.useEffect(() => {
+    const storedDashboardRole = localStorage.getItem('dashboardRole');
+    if (storedDashboardRole) {
+      setDashboardRole(storedDashboardRole);
+    }
+  }, [isAuthenticated]);
+
   React.useEffect(() => {
     if (isAuthenticated) {
-      router.push(redirectTo);
+      // Use dashboardRole if available, otherwise use default redirectTo
+      const finalRedirect = dashboardRole ? `/dashboard/${dashboardRole}` : redirectTo;
+      router.push(finalRedirect);
     }
-  }, [isAuthenticated, router, redirectTo]);
+  }, [isAuthenticated, dashboardRole, router, redirectTo]);
 
   React.useEffect(() => {
     return () => {
@@ -60,7 +71,8 @@ const Login: React.FC<LoginProps> = ({
       return;
     }
 
-    dispatch(login(formData));
+    // Pass userType so authService can hit the correct backend endpoint
+    dispatch(login({ ...formData, userType }));
   };
 
   const handleOtpVerification = async (e: React.FormEvent) => {

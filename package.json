@@ -1,5 +1,5 @@
 {
-  "name": "b2b-marketplace-frontend",
+  "name": "n",
   "version": "0.1.2",
   "private": true,
   "scripts": {
@@ -110,5 +110,12 @@
   "overrides": {
     "prismjs": "^1.30.0",
     "refractor": "^5.0.0"
-  }
+  },
+  "description": "**A comprehensive e-commerce and B2B trading platform for Indian businesses**",
+  "main": ".eslintrc.js",
+  "directories": {
+    "test": "tests"
+  },
+  "author": "",
+  "license": "ISC"
 }

@@ -82,8 +82,18 @@ export const categoryAPI = {
 
   // Get subcategories by category ID
   getSubCategoriesByCategory: async (categoryId: number): Promise<SubCategory[]> => {
-    const response = await api.get(`/api/subcategories/category/${categoryId}`);
-    return response.data;
+    try {
+      console.log(`📚 Fetching subcategories for category ${categoryId}...`);
+      const response = await api.get(`/api/categories/${categoryId}/subcategories`);
+      console.log(`✅ Subcategories for category ${categoryId}:`, response.data);
+      
+      // Extract data from response - backend wraps it in {success, message, data}
+      let data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      console.error(`❌ Error fetching subcategories for category ${categoryId}:`, error?.response?.data || error?.message);
+      throw error;
+    }
   },
 
   // Get all subcategories
@@ -113,5 +123,46 @@ export const categoryAPI = {
   // Delete subcategory (Admin only)
   deleteSubCategory: async (id: number): Promise<void> => {
     await api.delete(`/api/subcategories/${id}`);
+  },
+
+  // Get category hierarchy (for cascading dropdowns)
+  getCategoryHierarchy: async (): Promise<any[]> => {
+    try {
+      console.log('🌳 Fetching category hierarchy...');
+      const response = await api.get('/api/categories/hierarchy');
+      console.log('📋 Category hierarchy response:', response);
+      
+      // Extract data from response - backend wraps it in {success, message, data}
+      let data = response.data?.data || response.data || [];
+      
+      // Since backend returns flat list with whitespace in subCategories field,
+      // we need to fetch subcategories separately for each category
+      if (Array.isArray(data)) {
+        // Fetch subcategories for each main category
+        const enrichedData = await Promise.all(
+          data.map(async (category: any) => {
+            try {
+              // Try to get subcategories
+              const subResponse = await api.get(`/api/categories/${category.id}/subcategories`);
+              const subData = subResponse.data?.data || subResponse.data || [];
+              return {
+                ...category,
+                children: Array.isArray(subData) ? subData : []
+              };
+            } catch (error) {
+              console.warn(`Could not fetch subcategories for ${category.name}`);
+              return { ...category, children: [] };
+            }
+          })
+        );
+        return enrichedData;
+      }
+      
+      console.log('✅ Extracted category data:', data);
+      return Array.isArray(data) ? data : [];
+    } catch (error: any) {
+      console.error('❌ Error fetching category hierarchy:', error?.response?.data || error?.message);
+      return [];
+    }
   }
 };

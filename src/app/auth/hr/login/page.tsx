@@ -25,17 +25,23 @@ export default function HRLoginPage() {
     e.preventDefault();
     console.log('HR login attempt for:', formData.emailOrPhone);
     
-    const result = await dispatch(login(formData));
+    const result = await dispatch(login({
+      ...formData,
+      userType: 'support',
+    }));
     
     if (login.fulfilled.match(result)) {
       console.log('HR login successful');
       if (result.payload.user && result.payload.token) {
-        if (result.payload.user.role === 'admin') {
+        const role = result.payload.user.role;
+        if (role === 'admin') {
+          // Admins using HR login still land on admin dashboard
           router.push('/dashboard/admin');
-        } else if (result.payload.user.role === 'hr') {
-          router.push('/auth/hr/pending-approval');
+        } else if (role === 'support' || role === 'hr') {
+          // HR/Support users go to the HR dashboard
+          router.push('/dashboard/hr');
         } else {
-          alert('This account is not registered as HR. Access denied.');
+          alert('This account is not registered as HR/Support. Access denied.');
           return;
         }
       }
@@ -57,12 +63,13 @@ export default function HRLoginPage() {
     if (verifyOtp.fulfilled.match(result)) {
       console.log('HR OTP verification successful');
       if (result.payload.user) {
-        if (result.payload.user.role === 'admin') {
+        const role = result.payload.user.role;
+        if (role === 'admin') {
           router.push('/dashboard/admin');
-        } else if (result.payload.user.role === 'hr') {
-          router.push('/auth/hr/pending-approval');
+        } else if (role === 'support' || role === 'hr') {
+          router.push('/dashboard/hr');
         } else {
-          alert('This account is not registered as HR. Access denied.');
+          alert('This account is not registered as HR/Support. Access denied.');
         }
       }
     }

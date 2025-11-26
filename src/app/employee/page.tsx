@@ -4,14 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { useEffect } from 'react';
+import type { RootState } from '@/store';
 
 export default function EmployeeLandingPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useSelector((state: any) => state.auth || {});
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    // If already logged in as employee, redirect to dashboard
-    if (isAuthenticated && user?.role === 'EMPLOYEE') {
+    // If already logged in as data-entry employee, redirect to data entry dashboard
+    const role = user?.role?.toString().toLowerCase();
+    if (isAuthenticated && (role === 'data_entry' || role === 'data-entry')) {
       router.push('/dashboard/employee');
     }
   }, [isAuthenticated, user, router]);
@@ -21,95 +23,72 @@ export default function EmployeeLandingPage() {
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-4 py-16 sm:py-24">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Employee Operations Portal
-            </h1>
-            <p className="text-lg text-gray-600 mb-4">
-              Manage vendor onboarding, KYC verification, product categories, and locations from a single dashboard.
-            </p>
-            <p className="text-gray-600 mb-8">
-              Access real-time analytics, approve vendors, and streamline operational workflows.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/auth/employee/login" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-center">
-                Login to Dashboard
-              </Link>
-              <Link href="/" className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-center">
-                Learn More
-              </Link>
-            </div>
-          </div>
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">1</div>
-                <div>
-                  <h3 className="font-semibold mb-1">Vendor Onboarding</h3>
-                  <p className="text-white/80 text-sm">Create, approve, and manage vendor registrations</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">2</div>
-                <div>
-                  <h3 className="font-semibold mb-1">KYC Management</h3>
-                  <p className="text-white/80 text-sm">Review and approve KYC documents</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">3</div>
-                <div>
-                  <h3 className="font-semibold mb-1">Data Management</h3>
-                  <p className="text-white/80 text-sm">Manage categories, locations, and site data</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">4</div>
-                <div>
-                  <h3 className="font-semibold mb-1">Analytics</h3>
-                  <p className="text-white/80 text-sm">View operational metrics and insights</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            Employee Portals
+          </h1>
+          <p className="text-lg text-gray-600">
+            Choose your role to access the correct dashboard.
+          </p>
         </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="bg-white border-t border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Key Features</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-6 bg-indigo-50 rounded-xl">
-              <div className="w-12 h-12 bg-indigo-600 text-white rounded-lg flex items-center justify-center mb-4 font-bold">📋</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Pending Approvals</h3>
-              <p className="text-gray-600">See and approve vendors waiting for verification</p>
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Data Entry */}
+          <Link href="/auth/employee/login" className="block">
+            <div className="h-full bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-indigo-300 transition">
+              <div className="text-3xl mb-3">📋</div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">Data Entry</h2>
+              <p className="text-sm text-gray-600 mb-3">
+                Manage vendors, KYC, categories and locations for marketplace data.
+              </p>
+              <span className="inline-flex items-center text-sm font-medium text-indigo-600">
+                Login as Data Entry
+                <span className="ml-1">→</span>
+              </span>
             </div>
-            <div className="p-6 bg-purple-50 rounded-xl">
-              <div className="w-12 h-12 bg-purple-600 text-white rounded-lg flex items-center justify-center mb-4 font-bold">📄</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Document Review</h3>
-              <p className="text-gray-600">Upload and verify KYC documents securely</p>
+          </Link>
+
+          {/* Support */}
+          <Link href="/auth/support/login" className="block">
+            <div className="h-full bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-emerald-300 transition">
+              <div className="text-3xl mb-3">🎧</div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">Support</h2>
+              <p className="text-sm text-gray-600 mb-3">
+                Solve all queries of customers and vendors via support tickets.
+              </p>
+              <span className="inline-flex items-center text-sm font-medium text-emerald-600">
+                Login as Support
+                <span className="ml-1">→</span>
+              </span>
             </div>
-            <div className="p-6 bg-pink-50 rounded-xl">
-              <div className="w-12 h-12 bg-pink-600 text-white rounded-lg flex items-center justify-center mb-4 font-bold">⚡</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Quick Actions</h3>
-              <p className="text-gray-600">One-click approvals and instant updates</p>
+          </Link>
+
+          {/* Finance */}
+          <Link href="/auth/finance/login" className="block">
+            <div className="h-full bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md hover:border-orange-300 transition">
+              <div className="text-3xl mb-3">💰</div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">Finance</h2>
+              <p className="text-sm text-gray-600 mb-3">
+                See leads, sales, payments and invoices for vendors.
+              </p>
+              <span className="inline-flex items-center text-sm font-medium text-orange-600">
+                Login as Finance
+                <span className="ml-1">→</span>
+              </span>
             </div>
-          </div>
+          </Link>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
+      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16 mt-8">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-lg text-white/90 mb-8">Login to your account to access the employee dashboard</p>
+          <h2 className="text-3xl font-bold mb-4">Not sure which portal to use?</h2>
+          <p className="text-lg text-white/90 mb-8">
+            Data Entry handles listings, Support solves tickets, Finance manages payments and invoices.
+          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/employee/login" className="px-8 py-3 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-semibold">
-              Login Now
-            </Link>
-            <Link href="/" className="px-8 py-3 border border-white text-white rounded-lg hover:bg-white/10 font-semibold">
+            <Link href="/" className="px-8 py-3 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 font-semibold">
               Back to Home
             </Link>
           </div>

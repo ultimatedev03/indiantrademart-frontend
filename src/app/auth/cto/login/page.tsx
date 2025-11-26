@@ -25,12 +25,16 @@ export default function CTOLoginPage() {
     e.preventDefault();
     console.log('CTO login attempt for:', formData.emailOrPhone);
     
-    const result = await dispatch(login(formData));
+    const result = await dispatch(login({
+      ...formData,
+      userType: 'cto',
+    }));
     
     if (login.fulfilled.match(result)) {
       console.log('CTO login successful');
       if (result.payload.user && result.payload.token) {
         if (result.payload.user.role === 'cto') {
+          // CTO users land on their own CTO dashboard
           router.push('/dashboard/cto');
         } else {
           alert('This account is not registered as a CTO. Access denied.');

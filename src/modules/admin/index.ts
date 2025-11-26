@@ -12,6 +12,8 @@ export { default as TopSellingProductList } from './components/TopSellingProduct
 export { default as UserManagement } from './components/UserManagement';
 export { default as VendorManagement } from './components/VendorManagement';
 export { default as CreateAdminForm } from './components/CreateAdminForm';
+export { default as CreateHRForm } from './components/CreateHRForm';
+export { default as CreateCTOForm } from './components/CreateCTOForm';
 
 // Services
 export * from './services/adminApi';

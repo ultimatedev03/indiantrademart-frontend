@@ -68,22 +68,8 @@ export default function VendorAnalytics() {
     } catch (err) {
       console.error('Error fetching analytics data:', err);
       setError(`Failed to fetch analytics data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setAnalyticsData(null);
       setLoading(false);
-      
-      // Fallback to demo data if API fails
-      setAnalyticsData({
-        totalUsers: 150,
-        totalProducts: 45,
-        totalVendors: 28,
-        totalOrders: 89,
-        verifiedVendors: 25,
-        activeProducts: 42,
-        approvedProducts: 40,
-        totalInquiries: 156,
-        resolvedInquiries: 134,
-        totalReviews: 78,
-        approvedReviews: 71
-      });
     }
   };
 
@@ -97,28 +83,10 @@ export default function VendorAnalytics() {
     return () => clearInterval(interval);
   }, []);
 
-  const salesData = [
-    { month: 'Jan', sales: 45000, orders: 120 },
-    { month: 'Feb', sales: 52000, orders: 135 },
-    { month: 'Mar', sales: 48000, orders: 128 },
-    { month: 'Apr', sales: 61000, orders: 165 },
-    { month: 'May', sales: 55000, orders: 148 },
-    { month: 'Jun', sales: 67000, orders: 182 }
-  ];
-
-  const topProducts = [
-    { name: 'Laptop Stand', sold: 245, revenue: 61250 },
-    { name: 'Wireless Mouse', sold: 189, revenue: 37800 },
-    { name: 'USB Hub', sold: 156, revenue: 46800 },
-    { name: 'Phone Case', sold: 134, revenue: 26800 },
-    { name: 'Wireless Earbuds', sold: 98, revenue: 49000 }
-  ];
-
-  const customerData = [
-    { segment: 'New Customers', count: 45, percentage: 35 },
-    { segment: 'Returning Customers', count: 78, percentage: 60 },
-    { segment: 'VIP Customers', count: 7, percentage: 5 }
-  ];
+  // These will be fetched from backend in future enhancements
+  const salesData: any[] = [];
+  const topProducts: any[] = [];
+  const customerData: any[] = [];
 
   return (
     <div className="space-y-6">

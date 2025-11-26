@@ -24,7 +24,7 @@ export interface PaginatedResponse<T> {
 export interface LoginRequestDto {
   email: string;
   password: string;
-  userType?: 'user' | 'admin' | 'vendor';
+  userType?: 'user' | 'admin' | 'vendor' | 'cto' | 'support' | 'employee' | 'data_entry' | 'finance';
   emailOrPhone?: string;
 }
 
@@ -44,6 +44,7 @@ export interface JwtResponse {
   requiresOTP?: boolean;
   message?: string;
   userType?: string;
+  dashboardRole?: string; // For frontend routing after login
 }
 
 export interface ForgotPasswordRequestDto {

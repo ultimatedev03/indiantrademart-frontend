@@ -26,13 +26,19 @@ export default function AdminLoginPage() {
     e.preventDefault();
     console.log('🔐 Admin login attempt for:', formData.emailOrPhone);
     
-    const result = await dispatch(login(formData));
+    // Force admin userType so backend uses /auth/admin/login endpoint
+    const result = await dispatch(login({
+      emailOrPhone: formData.emailOrPhone,
+      password: formData.password,
+      userType: 'admin',
+    }));
     
     if (login.fulfilled.match(result)) {
       console.log('✅ Admin login successful');
       if (result.payload.user && result.payload.token) {
         // Check if user is admin
         if (result.payload.user.role === 'admin') {
+          // Redirect admins to their dedicated dashboard route
           router.push('/dashboard/admin');
         } else {
           alert('This account is not registered as an admin. Access denied.');
@@ -58,6 +64,7 @@ export default function AdminLoginPage() {
       console.log('✅ Admin OTP verification successful');
       // Check user role after OTP verification
       if (result.payload.user && result.payload.user.role === 'admin') {
+        // Redirect admins to their dedicated dashboard route
         router.push('/dashboard/admin');
       } else {
         alert('This account is not registered as an admin. Access denied.');

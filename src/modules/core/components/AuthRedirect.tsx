@@ -10,40 +10,62 @@ export default function AuthRedirect() {
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      console.log('🔄 AuthRedirect: User authenticated with role:', user.role);
+    // Immediately redirect on user change - don't wait for other state updates
+    if (!isAuthenticated || !user?.role) {
+      return;
+    }
+    console.log('🔄 AuthRedirect: User authenticated with role:', user.role);
       
       // Map user roles to their respective dashboards
       const dashboardMap: { [key: string]: string } = {
-        // Handle various role formats
-        'USER': '/dashboard/user',
-        'user': '/dashboard/user',
-        'BUYER': '/dashboard/user', // Map buyer to user dashboard
-        'buyer': '/dashboard/user',
-        'VENDOR': '/dashboard/vendor-panel',
-        'vendor': '/dashboard/vendor-panel',
-        'SELLER': '/dashboard/vendor-panel', // Map seller to vendor dashboard
-        'seller': '/dashboard/vendor-panel',
-        'ADMIN': '/dashboard/admin',
-        'admin': '/dashboard/admin'
+        // Buyer / user
+        USER: '/dashboard/user',
+        user: '/dashboard/user',
+        BUYER: '/dashboard/user',
+        buyer: '/dashboard/user',
+        // Vendor / seller
+        VENDOR: '/dashboard/vendor-panel',
+        vendor: '/dashboard/vendor-panel',
+        SELLER: '/dashboard/vendor-panel',
+        seller: '/dashboard/vendor-panel',
+        // Admin / management routes
+        ADMIN: '/dashboard/admin',
+        admin: '/dashboard/admin',
+        MANAGEMENT: '/management',
+        management: '/management',
+        // Support / HR -> HR / Support dashboards
+        SUPPORT: '/dashboard/hr',
+        support: '/dashboard/hr',
+        HR: '/dashboard/hr',
+        hr: '/dashboard/hr',
+        // Finance
+        FINANCE: '/dashboard/finance',
+        finance: '/dashboard/finance',
+        // CTO -> CTO dashboard
+        CTO: '/dashboard/cto',
+        cto: '/dashboard/cto',
+        // Data entry employees -> Employee dashboard
+        DATA_ENTRY: '/dashboard/employee',
+        'data_entry': '/dashboard/employee',
+        'DATA-ENTRY': '/dashboard/employee',
+        'data-entry': '/dashboard/employee',
       };
       
       // Normalize the role (remove ROLE_ prefix if present)
       const userRole = user.role.replace('ROLE_', '');
-      const dashboardPath = dashboardMap[userRole];
+      const dashboardPath = dashboardMap[userRole] ?? dashboardMap[userRole.toUpperCase()];
       
       console.log('🔄 AuthRedirect: Normalized role:', userRole, 'Dashboard path:', dashboardPath);
       
       if (dashboardPath) {
         console.log('✅ AuthRedirect: Redirecting to dashboard:', dashboardPath);
-        router.push(dashboardPath);
+        router.replace(dashboardPath);
       } else {
         console.warn('⚠️ AuthRedirect: Role not recognized, redirecting to home. Role:', userRole);
         // Fallback to home if role not recognized
-        router.push('/');
+        router.replace('/');
       }
-    }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user?.role, router]);
 
   return null;
 }

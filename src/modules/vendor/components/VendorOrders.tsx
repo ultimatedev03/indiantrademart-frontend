@@ -17,6 +17,8 @@ interface Order {
 }
 
 export default function VendorOrders() {
+  // This component will load real data from API
+  // For now, show empty state while API is being implemented
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);

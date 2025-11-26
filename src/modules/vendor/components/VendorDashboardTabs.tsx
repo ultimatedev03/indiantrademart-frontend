@@ -1,17 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import VendorOverview from './VendorOverview';
 import VendorProducts from './VendorProducts';
 import VendorOrders from './VendorOrders';
-import VendorAnalytics from './VendorAnalytics';
-import VendorLeads from './VendorLeads';
 import VendorProfile from './VendorProfile';
-import VendorInvoices from './VendorInvoices';
 import VendorInquiries from './VendorInquiries';
-import VendorPackagesPage from './VendorPackagesPage';
-import TransactionHistory from './TransactionHistory';
-import ProductRecommendationEngine from '../../../components/vendor/ProductRecommendationEngine';
+
+// Lazy load non-critical components
+const VendorAnalytics = lazy(() => import('./VendorAnalytics'));
+const VendorLeads = lazy(() => import('./VendorLeads'));
+const VendorInvoices = lazy(() => import('./VendorInvoices'));
+const VendorPackagesPage = lazy(() => import('./VendorPackagesPage'));
+const TransactionHistory = lazy(() => import('./TransactionHistory'));
+const ProductRecommendationEngine = lazy(() => import('../../../components/vendor/ProductRecommendationEngine'));
+
+// Loading skeleton component
+const TabLoadingSkeleton = () => (
+  <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm animate-pulse">
+    <div className="space-y-4">
+      <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+      <div className="h-4 bg-gray-200 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+    </div>
+  </div>
+);
 
 const tabs = [
   { id: 'overview', label: 'Dashboard', icon: '🏠', color: 'blue' },
@@ -43,7 +56,11 @@ export default function VendorDashboardTabs() {
       case 'overview':
         return <VendorOverview onTabChange={handleTabChange} />;
       case 'recommendations':
-        return <ProductRecommendationEngine />;
+        return (
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <ProductRecommendationEngine />
+          </Suspense>
+        );
       case 'products':
         return <VendorProducts initialView={productView} />;
       case 'inquiries':
@@ -51,15 +68,35 @@ export default function VendorDashboardTabs() {
       case 'orders':
         return <VendorOrders />;
       case 'invoices':
-        return <VendorInvoices />;
+        return (
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <VendorInvoices />
+          </Suspense>
+        );
       case 'analytics':
-        return <VendorAnalytics />;
+        return (
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <VendorAnalytics />
+          </Suspense>
+        );
       case 'leads':
-        return <VendorLeads />;
+        return (
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <VendorLeads />
+          </Suspense>
+        );
       case 'packages':
-        return <VendorPackagesPage />;
+        return (
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <VendorPackagesPage />
+          </Suspense>
+        );
       case 'billing':
-        return <TransactionHistory />;
+        return (
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <TransactionHistory />
+          </Suspense>
+        );
       case 'profile':
         return <VendorProfile />;
       default:

@@ -1,68 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  SupportDashboardTabs,
-  SupportStatsPanel,
-  SLATrackingPanel,
-  KnowledgeBasePanel,
-  TicketManagement,
-  SupportAnalytics
-} from '@/modules/support';
-import { AuthGuard } from '@/modules/core';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store';
+import EmployeeSupportManagement from '@/modules/employee/components/EmployeeSupportManagement';
 
-export default function SupportDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+export default function SupportDashboardPage() {
+  const router = useRouter();
+  const { user, isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
+  const [canRender, setCanRender] = useState(false);
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <div className="space-y-8">
-            <SupportStatsPanel />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <SLATrackingPanel />
-              <SupportAnalytics />
-            </div>
-          </div>
-        );
-      case 'tickets':
-        return <TicketManagement />;
-      case 'sla':
-        return <SLATrackingPanel detailed={true} />;
-      case 'knowledge-base':
-        return <KnowledgeBasePanel />;
-      case 'analytics':
-        return <SupportAnalytics detailed={true} />;
-      default:
-        return (
-          <div className="space-y-8">
-            <SupportStatsPanel />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <SLATrackingPanel />
-              <SupportAnalytics />
-            </div>
-          </div>
-        );
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isAuthenticated) {
+      router.replace('/auth/hr/login');
+      return;
     }
-  };
+
+    const role = user?.role?.toString().toLowerCase() || '';
+    // For now, support dashboard is for SUPPORT/HR role
+    if (role === 'support' || role === 'hr') {
+      setCanRender(true);
+    } else {
+      router.replace('/');
+    }
+  }, [isAuthenticated, user, loading, router]);
+
+  if (loading || !canRender) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
 
   return (
-    <AuthGuard allowedRoles={['ROLE_ADMIN', 'ADMIN', 'ROLE_SUPPORT', 'SUPPORT']}>
-      <section className="max-w-7xl mx-auto px-4 py-10 space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Support Dashboard</h1>
-          <div className="text-sm text-gray-500">
-            Welcome to the Support Center! 🎧
-          </div>
-        </div>
-        
-        <SupportDashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
-        
-        <div className="mt-8">
-          {renderTabContent()}
-        </div>
-      </section>
-    </AuthGuard>
-  )
+    <div className="min-h-screen bg-gray-50 pt-16">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <EmployeeSupportManagement />
+      </div>
+    </div>
+  );
 }

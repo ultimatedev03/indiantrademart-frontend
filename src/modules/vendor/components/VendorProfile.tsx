@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store';
+import { vendorProfileAPI, VendorProfile as VendorProfileType } from '../services/vendorProfileApi';
+import { toast } from 'react-hot-toast';
 
 export default function VendorProfile() {
+  const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState('business');
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState<VendorProfileType>({
     // Business Information
     businessName: 'Tech Solutions India',
     businessType: 'Private Limited',
@@ -41,18 +48,83 @@ export default function VendorProfile() {
     categories: ['Electronics', 'Computer Accessories', 'Mobile Accessories'],
     
     // Certifications
-    certifications: ['ISO 9001:2015', 'BIS Certification', 'MSME Registration']
+    certifications: ['ISO 9001:2015', 'BIS Certification', 'MSME Registration'],
+    
+    // Portfolio & Links
+    profileUrl: 'https://techsolutions.com/profile',
+    portfolioVideoUrl: 'https://youtu.be/example-video'
   });
+
+  useEffect(() => {
+    loadProfileData();
+  }, [user?.id]);
+
+  const loadProfileData = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('📋 Loading vendor profile for user:', user.id);
+      const profileData = await vendorProfileAPI.getMyProfile();
+      console.log('✅ Profile data loaded:', profileData);
+      
+      // Merge fetched data with current form data to preserve structure
+      setFormData(prev => ({
+        ...prev,
+        ...profileData
+      }));
+    } catch (error: any) {
+      console.error('❌ Error loading profile:', error);
+      console.error('Error details:', error?.response?.status, error?.response?.data);
+      
+      // Only show error if it's not a 401/403 (auth issues are expected for new vendors)
+      const status = error?.response?.status;
+      if (status !== 401 && status !== 403) {
+        toast.error('Failed to load profile data');
+      }
+      // Keep default values on error - this is normal for new vendors
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    // Save logic here
-    setIsEditing(false);
-    alert('Profile updated successfully!');
+  const handleSave = async () => {
+    if (!user?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      console.log('📝 Saving profile changes...', formData);
+      await vendorProfileAPI.updateProfile(formData);
+      toast.success('Profile updated successfully!');
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('❌ Error saving profile:', error);
+      toast.error('Failed to save profile changes');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg p-12 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -68,13 +140,15 @@ export default function VendorProfile() {
             <>
               <button 
                 onClick={handleSave}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={saving}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                💾 Save Changes
+                {saving ? '⏳ Saving...' : '💾 Save Changes'}
               </button>
               <button 
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                disabled={saving}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -99,6 +173,7 @@ export default function VendorProfile() {
               { id: 'contact', label: 'Contact Details', icon: '📞' },
               { id: 'address', label: 'Address', icon: '📍' },
               { id: 'bank', label: 'Bank Details', icon: '🏦' },
+              { id: 'portfolio', label: 'Portfolio & Links', icon: '🎬' },
               { id: 'documents', label: 'Documents', icon: '📄' },
               { id: 'settings', label: 'Settings', icon: '⚙️' }
             ].map((tab) => (
@@ -455,6 +530,81 @@ export default function VendorProfile() {
             </div>
           )}
 
+          {/* Portfolio & Links Tab */}
+          {activeTab === 'portfolio' && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-2">📌 Portfolio & Links</h4>
+                <p className="text-sm text-blue-800">Add links to your profile, portfolio website, and portfolio videos to showcase your business to potential clients.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Profile URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.profileUrl}
+                    onChange={(e) => handleInputChange('profileUrl', e.target.value)}
+                    disabled={!isEditing}
+                    placeholder="https://yourcompany.com/profile"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Link to your business profile or portfolio page</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Portfolio Video URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.portfolioVideoUrl}
+                    onChange={(e) => handleInputChange('portfolioVideoUrl', e.target.value)}
+                    disabled={!isEditing}
+                    placeholder="https://youtube.com/watch?v=example"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Link to your portfolio video (YouTube, Vimeo, etc.)</p>
+                </div>
+              </div>
+
+              {/* Preview Section */}
+              <div className="space-y-4 border-t pt-6">
+                <h4 className="font-medium text-gray-900">Preview</h4>
+                
+                {formData.profileUrl && (
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-2">📄 Profile Link</p>
+                    <a 
+                      href={formData.profileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline text-sm break-all"
+                    >
+                      {formData.profileUrl}
+                    </a>
+                  </div>
+                )}
+
+                {formData.portfolioVideoUrl && (
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-2">🎬 Portfolio Video</p>
+                    <a 
+                      href={formData.portfolioVideoUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline text-sm break-all"
+                    >
+                      {formData.portfolioVideoUrl}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Documents Tab */}
           {activeTab === 'documents' && (
             <div className="space-y-6">
@@ -462,7 +612,7 @@ export default function VendorProfile() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Business Categories</h4>
                   <div className="space-y-2">
-                    {formData.categories.map((category, index) => (
+                    {(formData.categories || []).map((category, index) => (
                       <div key={index} className="flex items-center justify-between bg-white p-2 rounded">
                         <span className="text-sm text-gray-700">{category}</span>
                         {isEditing && (
@@ -483,7 +633,7 @@ export default function VendorProfile() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Certifications</h4>
                   <div className="space-y-2">
-                    {formData.certifications.map((cert, index) => (
+                    {(formData.certifications || []).map((cert, index) => (
                       <div key={index} className="flex items-center justify-between bg-white p-2 rounded">
                         <span className="text-sm text-gray-700">{cert}</span>
                         {isEditing && (

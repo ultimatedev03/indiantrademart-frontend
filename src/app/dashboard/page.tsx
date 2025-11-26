@@ -13,18 +13,30 @@ export default function GeneralDashboard() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/auth/user/login');
+      router.replace('/auth/user/login');
       return;
     }
 
     // Redirect to specific dashboard based on role
-    const userRole = user?.role?.toUpperCase();
-    if (userRole === 'ADMIN') {
-      router.push('/dashboard/admin');
-    } else if (userRole === 'VENDOR' || userRole === 'SELLER') {
-      router.push('/dashboard/vendor-panel');
-    } else if (userRole === 'USER' || userRole === 'BUYER') {
-      router.push('/dashboard/user');
+    const role = user?.role?.toUpperCase();
+    if (!role) return;
+
+    if (role === 'ADMIN') {
+      // Admins go to their dedicated admin dashboard
+      router.replace('/dashboard/admin');
+    } else if (role === 'VENDOR' || role === 'SELLER') {
+      router.replace('/dashboard/vendor-panel');
+    } else if (role === 'USER' || role === 'BUYER') {
+      router.replace('/dashboard/user');
+    } else if (role === 'SUPPORT' || role === 'HR') {
+      // HR / Support users -> HR dashboard
+      router.replace('/dashboard/hr');
+    } else if (role === 'CTO') {
+      router.replace('/dashboard/cto');
+    } else if (role === 'DATA_ENTRY') {
+      router.replace('/dataentry');
+    } else if (role === 'FINANCE') {
+      router.replace('/dashboard/finance');
     }
   }, [isAuthenticated, user, router]);
 

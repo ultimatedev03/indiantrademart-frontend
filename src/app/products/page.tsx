@@ -4,106 +4,141 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { Search, Filter, Grid, List, ShoppingCart, Star } from 'lucide-react';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 interface Product {
   id: number;
   name: string;
   price: number;
-  image: string;
+  originalPrice?: number;
+  imageUrl?: string;
+  image?: string;
   description: string;
-  category: string;
-  rating: number;
-  vendor: string;
+  category?: { name: string };
+  categoryName?: string;
+  rating?: number;
+  vendorId?: number;
+  vendor?: { name: string };
+  vendorName?: string;
   stock: number;
+  status?: string;
+  images?: Array<{ imageUrl: string }>;
+}
+
+interface ProductsResponse {
+  content: Product[];
+  totalElements: number;
+  totalPages: number;
 }
 
 export default function ProductsPage() {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [products, setProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('name');
+  const [page, setPage] = useState(0);
 
-  // Sample products data - replace with API call
-  const sampleProducts = useMemo<Product[]>(() => [
-    {
-      id: 1,
-      name: "Premium Laptop",
-      price: 45000,
-      image: "/api/placeholder/300/200",
-      description: "High-performance laptop for business use",
-      category: "Electronics",
-      rating: 4.5,
-      vendor: "Tech Solutions Ltd",
-      stock: 10
-    },
-    {
-      id: 2,
-      name: "Office Chair",
-      price: 8500,
-      image: "/api/placeholder/300/200",
-      description: "Ergonomic office chair with lumbar support",
-      category: "Furniture",
-      rating: 4.2,
-      vendor: "Office Furniture Co",
-      stock: 25
-    },
-    {
-      id: 3,
-      name: "Industrial Printer",
-      price: 25000,
-      image: "/api/placeholder/300/200",
-      description: "Heavy-duty printer for industrial use",
-      category: "Electronics",
-      rating: 4.8,
-      vendor: "Print Solutions Inc",
-      stock: 5
-    },
-    {
-      id: 4,
-      name: "Safety Helmet",
-      price: 1200,
-      image: "/api/placeholder/300/200",
-      description: "Industrial safety helmet with certification",
-      category: "Safety",
-      rating: 4.0,
-      vendor: "Safety First Ltd",
-      stock: 100
-    }
-  ], []);
-
-  const categories = ["All", "Electronics", "Furniture", "Safety", "Tools", "Materials"];
-
+  // Fetch products from API
   useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    setTimeout(() => {
-      setProducts(sampleProducts);
+    fetchProducts();
+  }, [page, searchTerm, selectedCategory]);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔍 Fetching products from API...');
+      
+      // Build query params
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('size', '12');
+      
+      // Add search term
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm);
+      }
+      
+      // Add category filter
+      if (selectedCategory && selectedCategory !== 'All') {
+        params.append('category', selectedCategory);
+      }
+
+      const response = await fetch(`/api/products?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch products: ${response.status}`);
+      }
+      
+      const data: ProductsResponse = await response.json();
+      console.log(`✅ Loaded ${data.content?.length || 0} products`);
+      setProducts(data.content || []);
+      
+      // Extract unique categories
+      if (page === 0) {
+        const cats = new Set<string>();
+        data.content?.forEach(p => {
+          if (p.category?.name) cats.add(p.category.name);
+          if (p.categoryName) cats.add(p.categoryName);
+        });
+        setAllCategories(['All', ...Array.from(cats)]);
+      }
+    } catch (err: any) {
+      console.error('❌ Error fetching products:', err);
+      setError('Failed to load products. Please try again.');
+      setProducts([]);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, [sampleProducts]);
+    }
+  };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === '' || selectedCategory === 'All' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const categories = allCategories.length > 0 ? allCategories : ["All"];
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
+  // Filter and sort products locally (API search already filters)
+  const sortedProducts = [...products].sort((a, b) => {
     switch (sortBy) {
       case 'price-low':
         return a.price - b.price;
       case 'price-high':
         return b.price - a.price;
       case 'rating':
-        return b.rating - a.rating;
+        return (b.rating || 0) - (a.rating || 0);
       default:
         return a.name.localeCompare(b.name);
     }
   });
+
+  // Helper function to get product image URL
+  const getProductImage = (product: Product): string => {
+    if (product.imageUrl) {
+      if (product.imageUrl.startsWith('http')) return product.imageUrl;
+      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${product.imageUrl}`;
+    }
+    if (product.images && product.images.length > 0) {
+      const imageUrl = product.images[0].imageUrl;
+      if (imageUrl.startsWith('http')) return imageUrl;
+      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${imageUrl}`;
+    }
+    if (product.image) {
+      if (product.image.startsWith('http')) return product.image;
+      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${product.image}`;
+    }
+    // Placeholder image
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTVlN2ViIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzljYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+  };
+
+  const getCategoryName = (product: Product): string => {
+    return product.category?.name || product.categoryName || 'Uncategorized';
+  };
+
+  const getVendorName = (product: Product): string => {
+    return product.vendor?.name || product.vendorName || 'Unknown Vendor';
+  };
 
   const addToCart = (product: Product) => {
     if (!isAuthenticated) {
@@ -114,10 +149,27 @@ export default function ProductsPage() {
     alert(`Added ${product.name} to cart!`);
   };
 
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && products.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <EmptyState
+          icon="⚠️"
+          title="Error Loading Products"
+          description={error}
+          actionText="Try Again"
+          onAction={() => fetchProducts()}
+        />
       </div>
     );
   }
@@ -204,38 +256,66 @@ export default function ProductsPage() {
           <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {sortedProducts.map(product => (
               <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                />
+                <div className="relative w-full h-48 bg-gray-200 overflow-hidden">
+                  <img
+                    src={getProductImage(product)}
+                    alt={product.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTVlN2ViIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzljYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                    }}
+                  />
+                </div>
                 <div className="p-4">
-                  <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{product.description}</p>
-                  <div className="flex items-center mb-2">
-                    <Star className="text-yellow-400 fill-current" size={16} />
-                    <span className="text-sm text-gray-600 ml-1">{product.rating}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 mb-2">by {product.vendor}</p>
-                  <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{product.name}</h3>
+                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description || 'No description available'}</p>
+                  {product.rating && (
+                    <div className="flex items-center mb-2">
+                      <Star className="text-yellow-400 fill-current" size={16} />
+                      <span className="text-sm text-gray-600 ml-1">{product.rating.toFixed(1)}</span>
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-500 mb-2">by {getVendorName(product)}</p>
+                  {product.originalPrice && product.originalPrice > product.price && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm line-through text-gray-400">₹{product.originalPrice.toLocaleString()}</span>
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                        {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% off
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-bold text-indigo-600">₹{product.price.toLocaleString()}</span>
-                    <span className="text-sm text-gray-500">Stock: {product.stock}</span>
+                    <span className={`text-sm ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {product.stock > 0 ? `Stock: ${product.stock}` : 'Out of Stock'}
+                    </span>
                   </div>
                   <button
                     onClick={() => addToCart(product)}
-                    className="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                    disabled={product.stock === 0}
+                    className={`w-full py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 ${
+                      product.stock > 0
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <ShoppingCart size={16} />
-                    Add to Cart
+                    {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
                   </button>
                 </div>
               </div>
             ))}
           </div>
 
-          {sortedProducts.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No products found matching your criteria.</p>
+          {sortedProducts.length === 0 && !loading && (
+            <div className="mt-8">
+              <EmptyState
+                icon="🔍"
+                title="No products found"
+                description="Try adjusting your search or filter criteria to find what you're looking for."
+                variant="compact"
+              />
             </div>
           )}
         </div>

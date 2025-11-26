@@ -80,6 +80,7 @@ export interface ProductDto {
   freeShipping?: boolean;
   shippingCharge?: number;
   isActive?: boolean;
+  locations?: Array<{ stateId?: number; cityId?: number; state?: string; city?: string }>;
 }
 
 export interface ProductSearchParams {
@@ -166,13 +167,37 @@ export const productAPI = {
       };
     }
     
+    // Validate required fields before sending
+    if (!productDto.name || !productDto.name.trim()) {
+      throw new Error('Product name is required');
+    }
+    if (!productDto.description || !productDto.description.trim()) {
+      throw new Error('Product description is required');
+    }
+    if (productDto.price <= 0) {
+      throw new Error('Product price must be greater than 0');
+    }
+    if (!productDto.categoryId || productDto.categoryId <= 0) {
+      throw new Error('Valid product category is required');
+    }
+    if (productDto.stock < 0) {
+      throw new Error('Stock cannot be negative');
+    }
+    
     // Use the correct endpoint as per backend controller
     console.log('📝 Adding product via: /api/products/vendor/add');
     console.log('📝 Product data:', productDto);
     
-    const response = await api.post('/api/products/vendor/add', productDto);
-    console.log('✅ Successfully added product');
-    return response.data;
+    try {
+      const response = await api.post('/api/products/vendor/add', productDto);
+      console.log('✅ Successfully added product');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error headers:', error.response?.headers);
+      throw error;
+    }
   },
 
   updateProduct: async (id: number, productDto: ProductDto): Promise<Product> => {

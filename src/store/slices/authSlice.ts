@@ -64,9 +64,23 @@ export const register = createAsyncThunk(
 export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
   try {
     await authService.logout();
+    // Clear all auth data from localStorage
     localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('vendorId');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('refreshToken');
+    // Also clear from auth service
+    authService.clearAuth();
     return null;
   } catch (error: any) {
+    // Even if logout API fails, clear local data
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    authService.clearAuth();
     return rejectWithValue(error.response?.data?.message || 'Logout failed');
   }
 });
@@ -90,6 +104,18 @@ const authSlice = createSlice({
   reducers: {
     clearError: (state) => {
       state.error = null;
+    },
+    forceLogout: (state) => {
+      // Force logout without API call (used for 401 or expired token)
+      state.user = null;
+      state.token = null;
+      state.isAuthenticated = false;
+      state.error = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+      }
     },
   },
   extraReducers: (builder) => {
@@ -147,5 +173,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, forceLogout } = authSlice.actions;
 export default authSlice.reducer;

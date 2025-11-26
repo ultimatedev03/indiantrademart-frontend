@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { register, verifyOtp, clearError, setTempCredentials } from '@/features/auth/authSlice';
 import { RootState, AppDispatch } from '@/store';
@@ -44,6 +44,52 @@ export default function VendorRegisterPage() {
   
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [otpCode, setOtpCode] = useState('');
+  const [states, setStates] = useState<any[]>([]);
+  const [filteredCities, setFilteredCities] = useState<any[]>([]);
+
+  // Load states and cities from the custom API route
+  useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const response = await fetch('/api/locations');
+        if (response.ok) {
+          const locations = await response.json();
+          // Extract unique states
+          const uniqueStates = [...new Set(locations.map((loc: any) => loc.state))];
+          setStates(uniqueStates.sort());
+        }
+      } catch (error) {
+        console.error('Failed to load locations:', error);
+      }
+    };
+    loadLocations();
+  }, []);
+
+  // Update filtered cities when state changes
+  useEffect(() => {
+    const loadCities = async () => {
+      if (formData.state) {
+        try {
+          const response = await fetch('/api/locations');
+          if (response.ok) {
+            const locations = await response.json();
+            // Filter cities by selected state
+            const cities = locations
+              .filter((loc: any) => loc.state === formData.state)
+              .map((loc: any) => loc.city);
+            const uniqueCities = [...new Set(cities)];
+            setFilteredCities(uniqueCities.sort());
+          }
+        } catch (error) {
+          console.error('Failed to load cities:', error);
+          setFilteredCities([]);
+        }
+      } else {
+        setFilteredCities([]);
+      }
+    };
+    loadCities();
+  }, [formData.state]);
 
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
@@ -85,13 +131,6 @@ export default function VendorRegisterPage() {
       errors.confirmPassword = 'Passwords do not match';
     }
     
-    // PAN card validation (for vendors only)
-    if (!formData.panCard.trim()) {
-      errors.panCard = 'PAN card number is required for vendors';
-    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panCard)) {
-      errors.panCard = 'PAN card number must be in format: ABCDE1234F';
-    }
-    
     // Business name validation
     if (!formData.businessName.trim()) {
       errors.businessName = 'Business name is required for vendors';
@@ -117,6 +156,11 @@ export default function VendorRegisterPage() {
       errors.pincode = 'Pincode is required';
     } else if (!/^\d{6}$/.test(formData.pincode)) {
       errors.pincode = 'Pincode must be exactly 6 digits';
+    }
+    
+    // PAN validation (optional but if provided should be valid)
+    if (formData.panCard && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panCard)) {
+      errors.panCard = 'PAN card number must be in format: ABCDE1234F';
     }
     
     // GST validation (optional but if provided should be valid)
@@ -153,6 +197,8 @@ export default function VendorRegisterPage() {
       panNumber: formData.panCard,
       businessName: formData.businessName,
       businessAddress: formData.businessAddress,
+      city: formData.city,
+      state: formData.state,
     };
 
     const result = await dispatch(register(registerData));
@@ -175,8 +221,20 @@ export default function VendorRegisterPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // If it's city dropdown and being cleared, reset city value
+    if (name === 'state') {
+      setFormData(prev => ({ ...prev, state: value, city: '' }));
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.state;
+        delete newErrors.city;
+        return newErrors;
+      });
+      return;
+    }
     
     // Clear validation error for this field when user starts typing
     if (validationErrors[name]) {
@@ -361,31 +419,42 @@ export default function VendorRegisterPage() {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input
-                  name="city"
-                  type="text"
-                  value={formData.city}
+                <select
+                  name="state"
+                  value={formData.state}
                   onChange={handleChange}
-                  placeholder="City"
                   required
-                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${validationErrors.city ? 'border-red-500' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                />
-                {validationErrors.city && (
-                  <p className="mt-1 text-sm text-red-600">{validationErrors.city}</p>
+                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${validationErrors.state ? 'border-red-500' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                >
+                  <option value="">Select State</option>
+                  {states.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.state && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.state}</p>
                 )}
               </div>
               <div>
-                <Input
-                  name="state"
-                  type="text"
-                  value={formData.state}
+                <select
+                  name="city"
+                  value={formData.city}
                   onChange={handleChange}
-                  placeholder="State"
                   required
-                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${validationErrors.state ? 'border-red-500' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                />
-                {validationErrors.state && (
-                  <p className="mt-1 text-sm text-red-600">{validationErrors.state}</p>
+                  disabled={!formData.state}
+                  className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${validationErrors.city ? 'border-red-500' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                >
+                  <option value="">{formData.state ? 'Select City' : 'Select State First'}</option>
+                  {filteredCities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.city && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.city}</p>
                 )}
               </div>
             </div>
@@ -412,8 +481,7 @@ export default function VendorRegisterPage() {
                 type="text"
                 value={formData.panCard}
                 onChange={handleChange}
-                placeholder="PAN Card Number (ABCDE1234F)"
-                required
+                placeholder="PAN Card Number (ABCDE1234F - Optional)"
                 maxLength={10}
                 style={{ textTransform: 'uppercase' }}
                 className={`appearance-none rounded-md relative block w-full px-3 py-2 border ${validationErrors.panCard ? 'border-red-500' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}

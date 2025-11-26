@@ -1,76 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  AdminDashboardTabs,
-  AdminStatsPanel,
-  TopSellingProductList,
-  TicketList,
-  LiveChatSupport,
-  UserManagement,
-  VendorManagement,
-  ProductManagement
-} from '@/modules/admin';
-import { AuthGuard } from '@/modules/core';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store';
+import ManagementDashboard from '@/app/management/page';
 
-export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+/**
+ * Admin Dashboard route: /dashboard/admin
+ *
+ * - If not authenticated, redirect to /auth/admin/login
+ * - If authenticated as ADMIN, render the (admin-focused) management dashboard UI
+ *   Note: CTO and HR have their own dashboards at /dashboard/cto and /dashboard/hr
+ * - Otherwise redirect to home
+ */
+export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { user, isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
+  const [canRender, setCanRender] = useState(false);
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <div className="space-y-8">
-            <AdminStatsPanel />
-            <TopSellingProductList />
-          </div>
-        );
-      case 'users':
-        return <UserManagement />;
-      case 'vendors':
-        return <VendorManagement />;
-      case 'products':
-        return <ProductManagement />;
-      case 'orders':
-        return (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Order Management</h2>
-            <p className="text-gray-600">Order management features coming soon...</p>
-          </div>
-        );
-      case 'support':
-        return (
-          <div className="space-y-8">
-            <TicketList />
-            <LiveChatSupport />
-          </div>
-        );
-      default:
-        return (
-          <div className="space-y-8">
-            <AdminStatsPanel />
-            <TopSellingProductList />
-          </div>
-        );
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isAuthenticated) {
+      router.replace('/auth/admin/login');
+      return;
     }
-  };
 
-  return (
-    <AuthGuard allowedRoles={['ROLE_ADMIN', 'ADMIN']}>
-      <section className="max-w-7xl mx-auto px-4 py-10 space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <div className="text-sm text-gray-500">
-            Welcome, Admin! 👋
-          </div>
-        </div>
-        
-        <AdminDashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
-        
-        <div className="mt-8">
-          {renderTabContent()}
-        </div>
-      </section>
-    </AuthGuard>
-  )
+    const role = user?.role?.toString().toLowerCase() || '';
+    if (role === 'admin' || role === 'role_admin' || role === 'management') {
+      setCanRender(true);
+    } else {
+      router.replace('/');
+    }
+  }, [isAuthenticated, user, loading, router]);
+
+  if (loading || !canRender) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
+
+  // Reuse the same management dashboard UI for admins
+  return <ManagementDashboard />;
 }

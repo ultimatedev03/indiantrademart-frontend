@@ -128,7 +128,9 @@ export default function VendorLoginPage() {
               />
             </div>
             {error && (
-              <div className="text-red-600 text-sm text-center">{error}</div>
+              <div className="text-red-600 text-sm text-center">
+                {typeof error === 'string' ? error : (error as any)?.message || 'Verification failed. Please try again.'}
+              </div>
             )}
             <div>
               <Button
@@ -185,7 +187,9 @@ export default function VendorLoginPage() {
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm text-center">{error}</div>
+              <div className="text-red-600 text-sm text-center">
+                {typeof error === 'string' ? error : (error as any)?.message || 'Login failed. Please try again.'}
+              </div>
             )}
 
             {error && showLoginWithOtp && (

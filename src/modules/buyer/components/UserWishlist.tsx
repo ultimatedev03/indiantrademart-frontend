@@ -1,21 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/shared/components/Button';
+import { EmptyState } from '@/shared/components/EmptyState';
 
-// Mock data for wishlist
-const mockWishlist = [
-  { id: 'P001', name: 'Bluetooth Headphones', price: 89.99 },
-  { id: 'P002', name: 'Smart Watch', price: 199.99 },
-  { id: 'P003', name: 'Wireless Charger', price: 39.99 }
-];
+interface WishlistItem {
+  id: number;
+  name: string;
+  price: number;
+  imageUrl?: string;
+}
 
 export default function UserWishlist() {
-  const [wishlist, setWishlist] = useState(mockWishlist);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const removeFromWishlist = (id: string) => {
+  useEffect(() => {
+    fetchWishlist();
+  }, []);
+
+  const fetchWishlist = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/wishlist');
+      if (response.ok) {
+        const data = await response.json();
+        setWishlist(data.content || data || []);
+      } else {
+        setWishlist([]);
+      }
+    } catch (err) {
+      console.error('Error fetching wishlist:', err);
+      setWishlist([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeFromWishlist = (id: number) => {
     setWishlist((prev) => prev.filter(item => item.id !== id));
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold">My Wishlist</h2>
+          <div className="mt-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -23,9 +62,13 @@ export default function UserWishlist() {
         <h2 className="text-xl font-semibold">My Wishlist</h2>
         <div className="mt-6 space-y-4">
           {wishlist.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Your wishlist is empty.</p>
-            </div>
+            <EmptyState
+              icon="❤️"
+              title="Your wishlist is empty"
+              description="Add products to your wishlist to keep track of items you love."
+              actionText="Continue Shopping"
+              actionLink="/products"
+            />
           ) : (
             wishlist.map(item => (
               <div key={item.id} className="flex justify-between items-center border rounded-lg p-4">

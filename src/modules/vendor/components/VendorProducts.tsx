@@ -286,7 +286,19 @@ export default function VendorProducts({ initialView = 'list' }: VendorProductsP
         {activeView === 'add' && (
           <div className="p-6">
             <h3 className="text-lg font-semibold mb-6">Add New Product</h3>
-            <AddProductForm />
+            <AddProductForm 
+              onSuccess={() => {
+                console.log('✅ Product added successfully');
+                // Refresh stats and go back to list
+                fetchProductStats();
+                setActiveView('list');
+                // Show success toast
+              }}
+              onCancel={() => {
+                console.log('❌ Add product cancelled');
+                setActiveView('list');
+              }}
+            />
           </div>
         )}
 

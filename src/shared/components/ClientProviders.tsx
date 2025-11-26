@@ -6,6 +6,7 @@ import { store, AppDispatch } from '@/store';
 import { initializeAuth } from '@/features/auth/authSlice';
 import { initAuthCleanup } from '@/utils/auth-cleanup';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { setupAxiosInterceptors } from '@/lib/axios-interceptors';
 
 interface ClientProvidersProps {
   children: React.ReactNode;
@@ -16,6 +17,9 @@ const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
+    // Set up axios interceptors for 401 handling
+    setupAxiosInterceptors();
+    
     // First clean up any expired/invalid tokens
     initAuthCleanup();
     

@@ -22,9 +22,36 @@ export class AuthService {
         password: loginData.password,
       };
       
-      // Use role-specific endpoint based on userType
-      const userType = loginData.userType || 'user';
-      const endpoint = `/auth/${userType}/login`;
+      // Decide correct backend endpoint based on userType
+      const userType = (loginData.userType || 'user').toLowerCase();
+      let endpoint = '/auth/login'; // generic user login (works for normal users)
+
+      switch (userType) {
+        case 'admin':
+          endpoint = '/auth/admin/login';
+          break;
+        case 'vendor':
+          endpoint = '/auth/vendor/login';
+          break;
+        case 'cto':
+          endpoint = '/auth/cto/login';
+          break;
+        case 'support':
+          endpoint = '/auth/support/login';
+          break;
+        case 'finance':
+          endpoint = '/auth/finance/login';
+          break;
+        case 'employee':
+        case 'data_entry':
+        case 'data-entry':
+          endpoint = '/auth/data-entry/login';
+          break;
+        case 'user':
+        default:
+          // keep default '/auth/login'
+          break;
+      }
       
       console.log('🚀 Attempting login at:', endpoint, 'with payload:', loginPayload);
       
@@ -137,10 +164,44 @@ export class AuthService {
       localStorage.setItem('authToken', authData.token);
       localStorage.setItem('user', JSON.stringify(userToStore));
       
+      // Derive dashboardRole from user role for dynamic routing
+      let dashboardRole = (authData as any).dashboardRole;
+      if (!dashboardRole && authData.user?.role) {
+        // Map backend role to dashboard role
+        const role = authData.user.role.replace('ROLE_', '').toLowerCase();
+        dashboardRole = this.mapRoleToDashboard(role);
+      }
+      
+      if (dashboardRole) {
+        console.log('📍 Storing dashboard role:', dashboardRole);
+        localStorage.setItem('dashboardRole', dashboardRole);
+      }
+      
       console.log('✅ Auth data stored successfully');
     } else {
       console.warn('⚠️ No token found in auth data, not storing');
     }
+  }
+  
+  /**
+   * Map backend role to dashboard route
+   */
+  private mapRoleToDashboard(role: string): string {
+    const roleMap: { [key: string]: string } = {
+      'admin': 'admin',
+      'vendor': 'vendor-panel',
+      'seller': 'vendor-panel',
+      'hr': 'hr',
+      'support': 'hr',
+      'employee': 'employee',
+      'data_entry': 'employee',
+      'finance': 'employee',
+      'cto': 'admin',
+      'user': 'user',
+      'buyer': 'user'
+    };
+    
+    return roleMap[role] || 'user';
   }
 
   /**
@@ -166,7 +227,22 @@ export class AuthService {
       return response;
     } catch (error: any) {
       console.error('❌ Registration error:', error);
-      throw new Error(error.response?.data?.message || error.response?.data || 'Registration failed');
+      
+      // Handle structured error responses from backend
+      const errorData = error.response?.data;
+      if (typeof errorData === 'object' && errorData.error) {
+        // New JSON error format from backend
+        const message = errorData.error || 'Registration failed';
+        console.error('Error type:', errorData.type, 'Message:', message);
+        throw new Error(message);
+      }
+      
+      // Fallback for other error formats
+      const errorMessage = error.response?.data?.message || 
+                          (typeof error.response?.data === 'string' ? error.response.data : null) ||
+                          error.message || 
+                          'Registration failed';
+      throw new Error(errorMessage);
     }
   }
 

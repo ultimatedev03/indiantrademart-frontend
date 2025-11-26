@@ -4,78 +4,272 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { productAPI, ProductDto } from '@/shared/services/productApi';
-import { categoryAPI, Category } from '@/shared/services/categoryApi';
+import { categoryAPI } from '@/shared/services/categoryApi';
+import { locationAPI, State, City } from '@/shared/services/locationApi';
 import { Button } from '@/shared/components/Button';
 import { Input } from '@/shared/components/Input';
-import { Select } from '@/shared/components';
 import { PlusCircle, Upload, X, AlertCircle } from 'lucide-react';
-import { MOCK_MODE } from '@/lib/mockMode';
+import { toast } from 'react-hot-toast';
+
+interface CategoryDTO {
+  id: number;
+  name: string;
+  categoryLevel: number;
+  children?: CategoryDTO[];
+}
 
 interface AddProductFormProps {
   onSuccess?: (product: any) => void;
   onCancel?: () => void;
 }
 
+interface FormData {
+  productName: string;
+  description: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  minOrderQuantity: number;
+  tags: string;
+  categoryId: number;
+  images: File[];
+}
+
+interface FormErrors {
+  productName?: string;
+  description?: string;
+  categoryId?: string;
+  price?: string;
+  quantity?: string;
+  unit?: string;
+  images?: string;
+}
+
 const AddProductForm: React.FC<AddProductFormProps> = ({ onSuccess, onCancel }) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [mainCategories, setMainCategories] = useState<CategoryDTO[]>([]);
+  const [subCategories, setSubCategories] = useState<CategoryDTO[]>([]);
+  const [microCategories, setMicroCategories] = useState<CategoryDTO[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<number>(0);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<number>(0);
+  const [selectedMicroCategory, setSelectedMicroCategory] = useState<number>(0);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [formData, setFormData] = useState<Omit<ProductDto, 'id' | 'images' | 'vendorId' | 'createdAt' | 'updatedAt'>>({
-    name: '',
+  
+  // Location selection states - Multi-state with multi-city support
+  const [states, setStates] = useState<State[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [selectedStates, setSelectedStates] = useState<Set<number>>(new Set()); // Multi-select states
+  const [selectedCitiesByState, setSelectedCitiesByState] = useState<Map<number, Set<number>>>(new Map()); // State -> Cities mapping
+  const [currentStateForCities, setCurrentStateForCities] = useState<number>(0); // Currently viewing cities for this state
+
+  const [formData, setFormData] = useState<FormData>({
+    productName: '',
     description: '',
     price: 0,
-    originalPrice: 0,
-    stock: 0,
-    categoryId: 0,
-    brand: '',
-    model: '',
-    sku: '',
+    quantity: 0,
+    unit: 'kg',
     minOrderQuantity: 1,
-    unit: 'piece',
-    specifications: '',
     tags: '',
-    weight: 0,
-    length: 0,
-    width: 0,
-    height: 0,
-    freeShipping: false,
-    shippingCharge: 0,
-    isActive: true,
+    categoryId: 0,
+    images: [],
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     loadCategories();
+    loadLocations();
   }, []);
+
+  const loadLocations = async () => {
+    try {
+      setLocationsLoading(true);
+      console.log('📍 Starting to load states...');
+      const statesData = await locationAPI.getStates();
+      console.log('📍 States loaded successfully:', statesData);
+      console.log(`📍 Total states: ${statesData?.length || 0}`);
+      setStates(statesData || []);
+    } catch (error: any) {
+      console.error('❌ Error loading states:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setStates([]);
+      toast.error('Failed to load locations');
+    } finally {
+      setLocationsLoading(false);
+    }
+  };
 
   const loadCategories = async () => {
     try {
-      const categoriesData = await categoryAPI.getAllCategories();
-      setCategories(categoriesData);
+      setCategoriesLoading(true);
+      console.log('📄 Starting to load category hierarchy...');
+      const data = await categoryAPI.getCategoryHierarchy();
+      console.log('🔍 Raw category response:', data);
+      
+      // Ensure data is always an array
+      const categories = (Array.isArray(data) ? data : (data as any)?.data || []) as CategoryDTO[];
+      console.log('✅ Processed categories:', categories);
+      console.log(`📄 Total main categories: ${categories.length}`);
+      
+      // Log first category structure to debug
+      if (categories.length > 0) {
+        console.log('🔍 First category structure:', {
+          id: categories[0].id,
+          name: categories[0].name,
+          hasChildren: !!categories[0].children,
+          childrenCount: categories[0].children?.length || 0,
+          childrenData: categories[0].children
+        });
+      }
+      
+      setMainCategories(categories);
     } catch (error: any) {
-      console.error('Error loading categories:', error);
-      
-      // Provide fallback categories when API fails
-      const fallbackCategories = [
-        { id: 1, name: 'Electronics' },
-        { id: 2, name: 'Computer Accessories' },
-        { id: 3, name: 'Mobile Accessories' },
-        { id: 4, name: 'Office Supplies' },
-        { id: 5, name: 'Hardware & Tools' },
-        { id: 6, name: 'Networking Equipment' },
-        { id: 7, name: 'Audio & Video' },
-        { id: 8, name: 'Storage Devices' }
-      ];
-      
-      setCategories(fallbackCategories);
-      
-      if (error.response?.status === 403) {
-        console.warn('Access forbidden to categories API. Using fallback categories.');
-      } else if (error.response?.status === 401) {
-        console.warn('User not authenticated. Using fallback categories.');
+      console.error('❌ Error loading categories:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setMainCategories([]);
+      toast.error('Failed to load categories');
+      setErrors(prev => ({ ...prev, categoryId: 'Failed to load categories' }));
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  const handleMainCategoryChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const catId = parseInt(e.target.value);
+    console.log('🏷️ Main category selected:', catId);
+    setSelectedMainCategory(catId);
+    setSelectedSubCategory(0);
+    setSelectedMicroCategory(0);
+    setSubCategories([]);
+    setMicroCategories([]);
+
+    if (catId > 0) {
+      // Fetch subcategories from backend API only
+      try {
+        console.log(`📚 Fetching subcategories for category ${catId}...`);
+        const response = await categoryAPI.getSubCategoriesByCategory(catId);
+        console.log(`✅ Subcategories fetched:`, response);
+        // Convert SubCategory to CategoryDTO format
+        const converted = response.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          categoryLevel: 1,
+          description: cat.description,
+          children: []
+        }));
+        setSubCategories(converted as any);
+      } catch (error) {
+        console.error(`❌ Error fetching subcategories for category ${catId}:`, error);
+        // No fallback data - require API to return data
+        toast.error('Failed to load subcategories');
+        setSubCategories([]);
+      }
+    }
+  };
+
+  const handleSubCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const catId = parseInt(e.target.value);
+    setSelectedSubCategory(catId);
+    setSelectedMicroCategory(0);
+    setMicroCategories([]);
+
+    if (catId > 0) {
+      const selected = subCategories.find(c => c.id === catId);
+      if (selected?.children) {
+        setMicroCategories(selected.children);
+      }
+    }
+  };
+
+  const handleMicroCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const catId = parseInt(e.target.value);
+    setSelectedMicroCategory(catId);
+    setFormData(prev => ({ ...prev, categoryId: catId }));
+
+    if (errors.categoryId) {
+      setErrors(prev => ({ ...prev, categoryId: '' }));
+    }
+  };
+
+  const handleStateToggle = async (stateId: number) => {
+    const newStates = new Set(selectedStates);
+    
+    if (newStates.has(stateId)) {
+      // Removing state - also remove its cities
+      newStates.delete(stateId);
+      const newCitiesByState = new Map(selectedCitiesByState);
+      newCitiesByState.delete(stateId);
+      setSelectedCitiesByState(newCitiesByState);
+    } else {
+      // Adding state - fetch its cities
+      newStates.add(stateId);
+      try {
+        setLocationsLoading(true);
+        console.log(`📍 Fetching cities for state ID: ${stateId}`);
+        const citiesData = await locationAPI.getCitiesByState(stateId);
+        if (Array.isArray(citiesData) && citiesData.length > 0) {
+          console.log(`✅ Loaded ${citiesData.length} cities for state ${stateId}`);
+          const newCitiesByState = new Map(selectedCitiesByState);
+          newCitiesByState.set(stateId, new Set());
+          setSelectedCitiesByState(newCitiesByState);
+          setCities(citiesData);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading cities for state ${stateId}:`, error);
+        toast.error('Failed to load cities for this state');
+        newStates.delete(stateId);
+      } finally {
+        setLocationsLoading(false);
+      }
+    }
+    
+    setSelectedStates(newStates);
+    console.log('📍 Selected states:', Array.from(newStates));
+  };
+
+  const handleCityToggle = (stateId: number, cityId: number) => {
+    const newCitiesByState = new Map(selectedCitiesByState);
+    const stateCities = newCitiesByState.get(stateId) || new Set();
+    
+    if (stateCities.has(cityId)) {
+      stateCities.delete(cityId);
+    } else {
+      stateCities.add(cityId);
+    }
+    
+    if (stateCities.size === 0) {
+      newCitiesByState.delete(stateId);
+    } else {
+      newCitiesByState.set(stateId, stateCities);
+    }
+    
+    setSelectedCitiesByState(newCitiesByState);
+    console.log(`🏙️ Cities for state ${stateId}:`, Array.from(stateCities));
+  };
+
+  const showCitiesForState = async (stateId: number) => {
+    setCurrentStateForCities(stateId);
+    if (!cities.length) {
+      try {
+        setLocationsLoading(true);
+        const citiesData = await locationAPI.getCitiesByState(stateId);
+        setCities(Array.isArray(citiesData) ? citiesData : []);
+      } catch (error) {
+        console.error(`❌ Error loading cities:`, error);
+      } finally {
+        setLocationsLoading(false);
       }
     }
   };
@@ -85,13 +279,10 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onSuccess, onCancel }) 
     
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : 
-              type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-              name === 'categoryId' ? parseInt(value) || 0 : value
+      [name]: type === 'number' ? parseFloat(value) || 0 : value
     }));
 
-    // Clear error for this field
-    if (errors[name]) {
+    if (errors[name as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
@@ -100,478 +291,485 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onSuccess, onCancel }) 
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Validate file types
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     const invalidFiles = files.filter(file => !validTypes.includes(file.type));
     
     if (invalidFiles.length > 0) {
-      alert('Please select only JPEG, PNG, or WebP images');
+      toast.error('Please select only JPEG, PNG, or WebP images');
       return;
     }
 
-    // Limit to 5 images
     const totalImages = selectedImages.length + files.length;
     if (totalImages > 5) {
-      alert('Maximum 5 images allowed');
+      toast.error('Maximum 5 images allowed');
       return;
     }
 
     setSelectedImages(prev => [...prev, ...files]);
 
-    // Create preview URLs
     files.forEach(file => {
       const url = URL.createObjectURL(file);
       setPreviewUrls(prev => [...prev, url]);
     });
+
+    if (errors.images) {
+      setErrors(prev => ({ ...prev, images: '' }));
+    }
   };
 
   const removeImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
     setPreviewUrls(prev => {
       const newUrls = prev.filter((_, i) => i !== index);
-      // Revoke the URL to free memory
       URL.revokeObjectURL(prev[index]);
       return newUrls;
     });
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) newErrors.name = 'Product name is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
-    if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
-    if (formData.stock < 0) newErrors.stock = 'Stock cannot be negative';
-    if (formData.categoryId === 0) newErrors.categoryId = 'Please select a category';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
+    const newErrors: FormErrors = {};
 
-    console.log('🚀 Starting product submission...');
-    console.log('Form data:', formData);
-    console.log('User:', user);
-    console.log('Token available:', !!localStorage.getItem('token'));
-    
+    // Check if required data is still loading
+    if (categoriesLoading) {
+      newErrors.categoryId = 'Categories are still loading. Please wait...';
+    }
+
+    if (!formData.productName?.trim()) {
+      newErrors.productName = 'Product name is required';
+    }
+    if (!formData.description?.trim()) {
+      newErrors.description = 'Description is required';
+    }
+    // Main category is required, but sub and micro are optional
+    if (!selectedMainCategory) {
+      newErrors.categoryId = 'Please select Main Category';
+    }
+    if (!formData.price) {
+      newErrors.price = 'Price is required';
+    }
+    if (!formData.quantity) {
+      newErrors.quantity = 'Quantity is required';
+    }
+    if (!formData.unit) {
+      newErrors.unit = 'Unit is required';
+    }
+    if (selectedImages.length === 0) {
+      newErrors.images = 'At least one image is required';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     setLoading(true);
-    try {
-      // Add product
-      console.log('📦 Calling productAPI.addProduct...');
-      const product = await productAPI.addProduct(formData);
-      console.log('✅ Product added successfully:', product);
-      
-      // Upload images if any
-      if (selectedImages.length > 0) {
-        await productAPI.uploadProductImages(product.id, selectedImages);
-      }
 
-      // Show success message
-      alert('Product added successfully!');
-      onSuccess?.(product);
+    try {
+      // Use most specific category available (micro > sub > main)
+      let finalCategoryId = selectedMainCategory;
+      if (selectedMicroCategory > 0) {
+        finalCategoryId = selectedMicroCategory;
+      } else if (selectedSubCategory > 0) {
+        finalCategoryId = selectedSubCategory;
+      }
+      
+      // Prepare product data - map form fields to ProductDto interface
+      // Build locations from multi-state multi-city selection
+      const locations = Array.from(selectedCitiesByState.entries()).flatMap(
+        ([stateId, citiesSet]) => Array.from(citiesSet).map(cityId => ({
+          stateId: stateId,
+          cityId: cityId,
+        }))
+      );
+
+      const productData: ProductDto = {
+        name: formData.productName,
+        description: formData.description,
+        categoryId: finalCategoryId,
+        price: formData.price,
+        stock: formData.quantity,
+        unit: formData.unit,
+        minOrderQuantity: formData.minOrderQuantity || 1,
+        tags: formData.tags,
+        locations: locations || [], // Allow empty locations if no cities are available
+      };
+      
+      // Log final category ID being sent
+      console.log('📋 Final category ID being sent:', finalCategoryId);
+      console.log('   Selected main category:', selectedMainCategory);
+      console.log('   Selected sub category:', selectedSubCategory);
+      console.log('   Selected micro category:', selectedMicroCategory);
+
+      console.log('📝 Submitting product data:', productData);
+      console.log('📍 Locations:', locations);
+      const result = await productAPI.addProduct(productData);
+      console.log('✅ Product created successfully:', result);
+
+      toast.success('Product added successfully!');
+      
+      // Upload images if any were selected
+      if (selectedImages.length > 0 && result.id) {
+        try {
+          console.log('🖼️ Uploading product images...');
+          await productAPI.uploadProductImages(result.id, selectedImages);
+          console.log('✅ Images uploaded successfully');
+        } catch (imageError) {
+          console.warn('⚠️ Image upload failed, but product was created:', imageError);
+          toast.error('Product created, but image upload failed');
+        }
+      }
       
       // Reset form
       setFormData({
-        name: '',
+        productName: '',
         description: '',
         price: 0,
-        originalPrice: 0,
-        stock: 0,
-        categoryId: 0,
-        brand: '',
-        model: '',
-        sku: '',
+        quantity: 0,
+        unit: 'kg',
         minOrderQuantity: 1,
-        unit: 'piece',
-        specifications: '',
         tags: '',
-        weight: 0,
-        length: 0,
-        width: 0,
-        height: 0,
-        freeShipping: false,
-        shippingCharge: 0,
-        isActive: true,
+        categoryId: 0,
+        images: [],
       });
+      setSelectedMainCategory(0);
+      setSelectedSubCategory(0);
+      setSelectedMicroCategory(0);
+      setSubCategories([]);
+      setMicroCategories([]);
+      setErrors({});
       setSelectedImages([]);
       setPreviewUrls([]);
+      setSelectedStates(new Set());
+      setSelectedCitiesByState(new Map());
+      setCurrentStateForCities(0);
+      setCities([]);
       
+      onSuccess?.(result);
     } catch (error: any) {
-      console.error('Error adding product:', error);
-      
-      let errorMessage = 'Error adding product';
-      
-      if (error.response) {
-        // Server responded with error status
-        const status = error.response.status;
-        const data = error.response.data;
-        
-        switch (status) {
-          case 400:
-            errorMessage = `Bad Request: ${data?.message || 'Invalid product data'}`;
-            break;
-          case 401:
-            errorMessage = 'Unauthorized: Please log in first';
-            break;
-          case 403:
-            errorMessage = 'Forbidden: You don\'t have permission to add products';
-            break;
-          case 404:
-            errorMessage = 'Not Found: Product API endpoint not found';
-            break;
-          case 500:
-            errorMessage = 'Server Error: Please try again later';
-            break;
-          default:
-            errorMessage = data?.message || `Error ${status}: ${error.response.statusText}`;
-        }
-      } else if (error.request) {
-        // Network error - no response received
-        errorMessage = 'Network Error: Unable to connect to server. Please check if the backend is running on port 8080.';
-      } else {
-        // Other error
-        errorMessage = error.message || 'An unexpected error occurred';
-      }
-      
-      alert(errorMessage);
+      console.error('❌ Error adding product:', error);
+      const errorMessage = error.message || 'Failed to add product';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const categoryOptions = categories.map(cat => ({
-    value: cat.id.toString(),
-    label: cat.name
-  }));
-
-  const unitOptions = [
-    { value: 'piece', label: 'Piece' },
-    { value: 'kg', label: 'Kilogram' },
-    { value: 'gram', label: 'Gram' },
-    { value: 'liter', label: 'Liter' },
-    { value: 'meter', label: 'Meter' },
-    { value: 'pair', label: 'Pair' },
-    { value: 'set', label: 'Set' },
-    { value: 'box', label: 'Box' },
-  ];
-
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Add New Product</h2>
-        {onCancel && (
-          <Button variant="ghost" onClick={onCancel}>
-            <X className="h-5 w-5" />
-          </Button>
-        )}
+    <form onSubmit={onSubmit} className="space-y-6 p-6 bg-white rounded-lg shadow">
+      <h2 className="text-2xl font-bold mb-6">Add New Product</h2>
+
+      {/* Product Name */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Product Name *</label>
+        <Input
+          type="text"
+          name="productName"
+          value={formData.productName}
+          onChange={handleInputChange}
+          placeholder="Enter product name"
+          className={errors.productName ? 'border-red-500' : ''}
+        />
+        {errors.productName && <p className="text-red-500 text-sm mt-1">{errors.productName}</p>}
       </div>
 
-      {/* Development Notice */}
-      {MOCK_MODE && (
-        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-yellow-600" />
-          <div>
-            <p className="text-sm font-medium text-yellow-800">Development Mode</p>
-            <p className="text-sm text-yellow-700">
-              Backend server not detected. Using mock data for development.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Description */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Description *</label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          placeholder="Enter product description"
+          rows={4}
+          className={`w-full px-3 py-2 border rounded ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
+        />
+        {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Product Name *"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            error={errors.name}
-            placeholder="Enter product name"
-          />
-          
-          <Select
-            label="Category *"
-            name="categoryId"
-            value={formData.categoryId.toString()}
-            onChange={handleInputChange}
-            options={categoryOptions}
-            error={errors.categoryId}
-            placeholder="Select category"
-          />
+      {/* Cascading Categories */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Main Category */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Main Category *</label>
+          <select
+            value={selectedMainCategory}
+            onChange={handleMainCategoryChange}
+            disabled={categoriesLoading}
+            className={`w-full px-3 py-2 border rounded ${errors.categoryId ? 'border-red-500' : 'border-gray-300'}`}
+          >
+            <option value={0}>Select Main Category</option>
+            {Array.isArray(mainCategories) && mainCategories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Brand"
-            name="brand"
-            value={formData.brand}
-            onChange={handleInputChange}
-            placeholder="Enter brand name"
-          />
-          
-          <Input
-            label="Model"
-            name="model"
-            value={formData.model}
-            onChange={handleInputChange}
-            placeholder="Enter model"
-          />
+        {/* Sub Category */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Sub Category (Optional)</label>
+          <select
+            value={selectedSubCategory}
+            onChange={handleSubCategoryChange}
+            disabled={subCategories.length === 0}
+            className={`w-full px-3 py-2 border rounded border-gray-300 ${subCategories.length === 0 ? 'bg-gray-100' : ''}`}
+          >
+            <option value={0}>Select Sub Category</option>
+            {Array.isArray(subCategories) && subCategories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Micro Category */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Micro Category (Optional)</label>
+          <select
+            value={selectedMicroCategory}
+            onChange={handleMicroCategoryChange}
+            disabled={microCategories.length === 0}
+            className={`w-full px-3 py-2 border rounded border-gray-300 ${microCategories.length === 0 ? 'bg-gray-100' : ''}`}
+          >
+            <option value={0}>
+              {microCategories.length === 0 ? 'No micro categories available' : 'Select Micro Category'}
+            </option>
+            {Array.isArray(microCategories) && microCategories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {errors.categoryId && <p className="text-red-500 text-sm">{errors.categoryId}</p>}
+
+      {/* Price and Quantity */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Price (₹) *</label>
           <Input
-            label="SKU"
-            name="sku"
-            value={formData.sku}
-            onChange={handleInputChange}
-            placeholder="Enter SKU"
-          />
-          
-          <Input
-            label="Price (₹) *"
+            type="number"
             name="price"
-            type="number"
-            value={formData.price}
-            onChange={handleInputChange}
-            error={errors.price}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-          
-          <Input
-            label="Original Price (₹)"
-            name="originalPrice"
-            type="number"
-            value={formData.originalPrice}
+            value={formData.price || ''}
             onChange={handleInputChange}
             placeholder="0.00"
-            min="0"
             step="0.01"
+            min="0"
+            className={errors.price ? 'border-red-500' : ''}
           />
+          {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Quantity *</label>
           <Input
-            label="Stock Quantity *"
-            name="stock"
             type="number"
-            value={formData.stock}
+            name="quantity"
+            value={formData.quantity || ''}
             onChange={handleInputChange}
-            error={errors.stock}
             placeholder="0"
             min="0"
+            className={errors.quantity ? 'border-red-500' : ''}
           />
-          
+          {errors.quantity && <p className="text-red-500 text-sm mt-1">{errors.quantity}</p>}
+        </div>
+      </div>
+
+      {/* Unit and Min Order */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Unit *</label>
+          <select
+            name="unit"
+            value={formData.unit}
+            onChange={handleInputChange}
+            className={`w-full px-3 py-2 border rounded ${errors.unit ? 'border-red-500' : 'border-gray-300'}`}
+          >
+            <option value="kg">kg</option>
+            <option value="gram">gram</option>
+            <option value="litre">litre</option>
+            <option value="piece">piece</option>
+            <option value="box">box</option>
+            <option value="dozen">dozen</option>
+          </select>
+          {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Min Order Quantity</label>
           <Input
-            label="Min Order Quantity"
-            name="minOrderQuantity"
             type="number"
+            name="minOrderQuantity"
             value={formData.minOrderQuantity}
             onChange={handleInputChange}
             placeholder="1"
             min="1"
           />
-          
-          <Select
-            label="Unit"
-            name="unit"
-            value={formData.unit}
-            onChange={handleInputChange}
-            options={unitOptions}
-          />
         </div>
+      </div>
 
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description *
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter product description"
-          />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description}</p>
-          )}
-        </div>
-
-        {/* Specifications */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Specifications
-          </label>
-          <textarea
-            name="specifications"
-            value={formData.specifications}
-            onChange={handleInputChange}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter product specifications"
-          />
-        </div>
-
-        {/* Tags */}
+      {/* Tags */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Tags</label>
         <Input
-          label="Tags"
+          type="text"
           name="tags"
           value={formData.tags}
           onChange={handleInputChange}
-          placeholder="Enter tags separated by commas"
+          placeholder="e.g., bulk, wholesale, new"
         />
+      </div>
 
-        {/* Dimensions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Input
-            label="Weight (kg)"
-            name="weight"
-            type="number"
-            value={formData.weight}
-            onChange={handleInputChange}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-          
-          <Input
-            label="Length (cm)"
-            name="length"
-            type="number"
-            value={formData.length}
-            onChange={handleInputChange}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-          
-          <Input
-            label="Width (cm)"
-            name="width"
-            type="number"
-            value={formData.width}
-            onChange={handleInputChange}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-          
-          <Input
-            label="Height (cm)"
-            name="height"
-            type="number"
-            value={formData.height}
-            onChange={handleInputChange}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-        </div>
-
-        {/* Shipping */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="freeShipping"
-              name="freeShipping"
-              checked={formData.freeShipping}
-              onChange={handleInputChange}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="freeShipping" className="text-sm text-gray-700">
-              Free Shipping
-            </label>
-          </div>
-          
-          {!formData.freeShipping && (
-            <Input
-              label="Shipping Charge (₹)"
-              name="shippingCharge"
-              type="number"
-              value={formData.shippingCharge}
-              onChange={handleInputChange}
-              placeholder="0.00"
-              min="0"
-              step="0.01"
-            />
+      {/* Service Locations - Multi-State Multi-City */}
+      <div className="border rounded-lg p-4 bg-blue-50">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
+          <span>📍</span> Service Locations <span className="text-xs font-normal text-gray-500">(Optional)</span>
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">Select states and cities where you provide service for this product</p>
+        
+        {/* States Checkboxes */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3">Step 1: Select States ({selectedStates.size} selected)</label>
+          {states.length === 0 && !locationsLoading && (
+            <p className="text-yellow-600 text-sm mb-4">No states available</p>
           )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-40 overflow-y-auto border border-gray-300 p-3 rounded bg-white">
+            {states.map(state => (
+              <label
+                key={state.id || state.name}
+                className="flex items-center gap-2 p-2 rounded hover:bg-blue-100 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedStates.has(state.id || 0)}
+                  onChange={() => handleStateToggle(state.id || 0)}
+                  disabled={locationsLoading}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm text-gray-700 font-medium">{state.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
-        {/* Product Images */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Product Images
-          </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-md p-4">
-            <div className="text-center">
-              <Upload className="mx-auto h-12 w-12 text-gray-400" />
-              <div className="mt-2">
-                <label htmlFor="images" className="cursor-pointer">
-                  <span className="text-blue-600 hover:text-blue-500">
-                    Upload images
-                  </span>
-                  <input
-                    id="images"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="sr-only"
-                  />
-                </label>
+        {/* Cities Selection by State */}
+        {selectedStates.size > 0 && (
+          <div>
+            <label className="block text-sm font-medium mb-3">Step 2: Select Cities for Each State</label>
+            <div className="space-y-4 max-h-64 overflow-y-auto border border-gray-300 rounded bg-white p-3">
+              {Array.from(selectedStates).map(stateId => {
+                const stateName = states.find(s => (s.id || 0) === stateId)?.name || `State ${stateId}`;
+                const stateCities = selectedCitiesByState.get(stateId) || new Set();
+                
+                return (
+                  <div key={stateId} className="pb-4 border-b last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => showCitiesForState(stateId)}
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-2"
+                    >
+                      📌 {stateName} ({stateCities.size} cities selected)
+                    </button>
+                    
+                    {currentStateForCities === stateId && cities.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-blue-50 p-2 rounded">
+                        {cities.map(city => (
+                          <label
+                            key={city.id || city.name}
+                            className="flex items-center gap-2 p-2 rounded hover:bg-blue-200 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={stateCities.has(city.id || 0)}
+                              onChange={() => handleCityToggle(stateId, city.id || 0)}
+                              className="w-4 h-4 rounded"
+                            />
+                            <span className="text-xs text-gray-700">{city.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Summary */}
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+              <p className="text-sm text-gray-700 font-medium">📍 Service Coverage:</p>
+              <div className="mt-2 text-xs text-gray-600">
+                {Array.from(selectedStates).map(stateId => {
+                  const stateName = states.find(s => (s.id || 0) === stateId)?.name || `State ${stateId}`;
+                  const stateCities = selectedCitiesByState.get(stateId) || new Set();
+                  const cityCount = stateCities.size;
+                  return (
+                    <div key={stateId} className="flex items-center gap-2 py-1">
+                      <span>✓</span>
+                      <span><strong>{stateName}</strong> - {cityCount} cit{cityCount === 1 ? 'y' : 'ies'}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <p className="mt-1 text-sm text-gray-500">
-                PNG, JPG, WebP up to 5 images
-              </p>
             </div>
           </div>
-          
-          {previewUrls.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
-              {previewUrls.map((url, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-md"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+        )}
+      </div>
+
+      {/* Image Upload */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Product Images *</label>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <Upload className="mx-auto mb-2 text-gray-400" size={24} />
+          <label className="cursor-pointer">
+            <span className="text-blue-600 hover:text-blue-800">Click to upload</span> or drag and drop
+            <input
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+          </label>
+          <p className="text-xs text-gray-500 mt-2">PNG, JPG, WebP up to 5MB each (max 5 images)</p>
         </div>
 
-        {/* Submit Buttons */}
-        <div className="flex justify-end space-x-4 pt-4">
-          {onCancel && (
-            <Button variant="outline" type="button" onClick={onCancel}>
-              Cancel
-            </Button>
-          )}
-          <Button type="submit" loading={loading}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
-        </div>
-      </form>
-    </div>
+        {selectedImages.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {previewUrls.map((url, index) => (
+              <div key={index} className="relative group">
+                <img src={url} alt={`Preview ${index}`} className="w-full h-24 object-cover rounded" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute inset-0 bg-black bg-opacity-50 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition"
+                >
+                  <X size={20} className="text-white" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {errors.images && <p className="text-red-500 text-sm mt-2">{errors.images}</p>}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-4 justify-end">
+        <Button
+          type="button"
+          onClick={onCancel}
+          variant="outline"
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={loading || categoriesLoading}
+          className="flex items-center gap-2"
+          title={categoriesLoading ? 'Waiting for categories to load...' : ''}
+        >
+          <PlusCircle size={18} />
+          {loading ? 'Adding...' : categoriesLoading ? 'Loading...' : 'Add Product'}
+        </Button>
+      </div>
+    </form>
   );
 };
 

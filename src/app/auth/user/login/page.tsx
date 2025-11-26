@@ -226,7 +226,9 @@ export default function UserLoginPage() {
               />
             </div>
             {error && (
-              <div className="text-red-600 text-sm text-center">{error}</div>
+              <div className="text-red-600 text-sm text-center">
+                {typeof error === 'string' ? error : (error as any)?.message || 'Verification failed. Please try again.'}
+              </div>
             )}
             <div>
               <Button
@@ -294,8 +296,10 @@ export default function UserLoginPage() {
             {/* Show error and login with OTP option if password is wrong */}
             {error && (
               <div className="space-y-3">
-                <div className="text-red-600 text-sm text-center">{error}</div>
-                {error.toLowerCase().includes('password') || error.toLowerCase().includes('invalid') ? (
+                <div className="text-red-600 text-sm text-center">
+                  {typeof error === 'string' ? error : (error as any)?.message || 'Login failed. Please try again.'}
+                </div>
+                {(typeof error === 'string' ? error : (error as any)?.message || '').toLowerCase().includes('password') || (typeof error === 'string' ? error : (error as any)?.message || '').toLowerCase().includes('invalid') ? (
                   <div className="text-center">
                     <p className="text-sm text-gray-600 mb-2">Wrong password?</p>
                     <button

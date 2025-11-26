@@ -29,7 +29,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'user' | 'vendor' | 'admin' | 'buyer' | 'cto' | 'hr' | 'employee' | 'support' | 'data_entry';
+  role: 'user' | 'vendor' | 'admin' | 'buyer' | 'cto' | 'hr' | 'employee' | 'support' | 'data_entry' | 'finance';
   profileImage?: string;
   isVerified?: boolean;
   roles?: string[];
@@ -86,6 +86,12 @@ export const login = createAsyncThunk(
       
       console.log('🔑 Login result:', { user: result.user, role: result.user?.role, roles: result.roles });
       
+      // Normalize backend role (e.g. "ROLE_ADMIN" or "ADMIN") to lowercase app roles ("admin", "vendor", etc.)
+      const backendRole = (result.user?.role || result.roles?.[0]) as string | undefined;
+      const normalizedRole = backendRole
+        ? backendRole.replace('ROLE_', '').toLowerCase()
+        : 'user';
+      
       if (result.requiresOTP) {
         return {
           requiresOTP: true,
@@ -100,7 +106,7 @@ export const login = createAsyncThunk(
           id: result.user?.id?.toString() || '1',
           email: result.user?.email || result.email || '',
           name: result.user?.name || 'User',
-          role: (result.user?.role || result.roles?.[0]?.replace('ROLE_', '').toLowerCase() || 'user') as 'user' | 'vendor' | 'admin' | 'buyer' | 'cto' | 'hr' | 'employee' | 'support' | 'data_entry',
+          role: (normalizedRole || 'user') as 'user' | 'vendor' | 'admin' | 'buyer' | 'cto' | 'hr' | 'employee' | 'support' | 'data_entry',
           roles: result.user?.role ? [result.user.role] : result.roles,
           isVerified: result.user?.isVerified || true
         },
@@ -120,12 +126,17 @@ export const verifyOtp = createAsyncThunk(
       
       console.log('🔑 OTP verification result:', { user: result.user, role: result.user?.role, roles: result.roles });
       
+      const backendRole = (result.user?.role || result.roles?.[0]) as string | undefined;
+      const normalizedRole = backendRole
+        ? backendRole.replace('ROLE_', '').toLowerCase()
+        : 'user';
+      
       return {
         user: {
           id: result.user?.id?.toString() || '1',
           email: result.user?.email || result.email || '',
           name: result.user?.name || 'User',
-          role: (result.user?.role || result.roles?.[0]?.replace('ROLE_', '').toLowerCase() || 'user') as 'user' | 'vendor' | 'admin' | 'buyer' | 'cto' | 'hr' | 'employee' | 'support' | 'data_entry',
+          role: (normalizedRole || 'user') as 'user' | 'vendor' | 'admin' | 'buyer' | 'cto' | 'hr' | 'employee' | 'support' | 'data_entry',
           roles: result.user?.role ? [result.user.role] : result.roles,
           isVerified: result.user?.isVerified || true
         },
@@ -238,12 +249,18 @@ export const initializeAuth = createAsyncThunk(
         // Token exists, verify if it's still valid by making a test API call
         try {
           // Optionally verify token with backend - for now just trust localStorage
+          const normalizedRole = (
+            user.roles?.[0]?.replace('ROLE_', '').toLowerCase() ||
+            (user.role as string | undefined)?.toLowerCase() ||
+            'user'
+          ) as User['role'];
+
           return {
             user: {
               id: user.userId?.toString() || user.id,
               email: user.email,
               name: user.firstName || user.name || 'User',
-              role: (user.roles?.[0]?.replace('ROLE_', '').toLowerCase() || user.role?.toLowerCase() || 'user') as 'user' | 'vendor' | 'admin' | 'buyer',
+              role: normalizedRole,
               roles: user.roles,
               isVerified: true
             },

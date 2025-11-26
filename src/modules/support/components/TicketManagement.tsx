@@ -5,6 +5,7 @@ import { Button } from '@/shared/components/Button';
 import { Input } from '@/shared/components/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/Card';
 import { Badge } from '@/shared/components';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 interface SupportTicket {
   id: string;
@@ -238,8 +239,13 @@ const TicketManagement: React.FC = () => {
                   <p className="mt-2 text-gray-600">Loading tickets...</p>
                 </div>
               ) : filteredTickets.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No tickets found matching your criteria.
+                <div className="py-8">
+                  <EmptyState
+                    icon="📭"
+                    title="No support tickets"
+                    description="No tickets found matching your criteria. When customers submit support requests, they will appear here."
+                    variant="compact"
+                  />
                 </div>
               ) : (
                 <div className="space-y-3">

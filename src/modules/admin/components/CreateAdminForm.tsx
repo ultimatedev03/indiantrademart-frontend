@@ -71,7 +71,8 @@ export default function CreateAdminForm() {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
 
-        router.push('/dashboard/admin');
+        // After verifying admin OTP, go to Management dashboard
+        router.push('/management');
       }
     } catch (err: any) {
       setError(err.response?.data || 'OTP verification failed');
@@ -244,7 +245,7 @@ export default function CreateAdminForm() {
           <li>Create the admin user using the form above</li>
           <li>Go to <a href="/login" className="text-indigo-600 hover:text-indigo-800">/login</a></li>
           <li>Login with the credentials you entered</li>
-          <li>Navigate to <a href="/dashboard/admin" className="text-indigo-600 hover:text-indigo-800">/dashboard/admin</a></li>
+          <li>Navigate to <a href="/management" className="text-indigo-600 hover:text-indigo-800">/management</a> (Management Dashboard)</li>
         </ol>
       </div>
     </div>

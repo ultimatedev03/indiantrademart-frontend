@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { getVendorOrders } from '@/lib/api';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 interface RecentOrder {
   id: number;
@@ -28,8 +29,10 @@ export default function VendorRecentOrders() {
 
       try {
         setLoading(true);
-        const response = await getVendorOrders(Number(user.id), 0, 5); // Get last 5 orders
-        const ordersData = response.data.content || response.data || [];
+        // Call backend to fetch vendor orders
+        const response = await getVendorOrders(Number(user.id), 0, 5);
+        // Handle different response formats
+        const ordersData = response?.data?.content || response?.data || response || [];
         
         const transformedOrders = ordersData.slice(0, 5).map((order: any) => ({
           id: order.id || order.orderId,
@@ -49,13 +52,7 @@ export default function VendorRecentOrders() {
       } catch (err: any) {
         console.error('Error loading recent orders:', err);
         setError('Failed to load recent orders');
-        
-        // Fallback to mock data
-        setOrders([
-          { id: 1, name: "Dell XPS 13", status: "Completed", price: "₹75,000", date: "15/06/2024" },
-          { id: 2, name: "HP Pavilion", status: "Processing", price: "₹55,000", date: "14/06/2024" },
-          { id: 3, name: "MacBook Air", status: "Shipped", price: "₹95,000", date: "13/06/2024" },
-        ]);
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -113,7 +110,7 @@ export default function VendorRecentOrders() {
         </div>
       )}
       {orders.length === 0 ? (
-        <p className="text-gray-500 text-sm text-center py-4">No recent orders found</p>
+        <EmptyState icon="📦" title="No recent orders" description="Your latest orders will appear here" variant="compact" />
       ) : (
         <ul className="space-y-3">
           {orders.map((item, i) => (

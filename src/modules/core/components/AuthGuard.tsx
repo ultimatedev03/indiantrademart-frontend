@@ -30,6 +30,22 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
 }) => {
   const router = useRouter();
   const { isAuthenticated, user, loading } = useSelector((state: RootState) => state.auth);
+  const [loadingTimeout, setLoadingTimeout] = React.useState(false);
+  
+  // Prevent infinite loading state - set max wait of 5 seconds
+  React.useEffect(() => {
+    if (!loading) {
+      setLoadingTimeout(false);
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      setLoadingTimeout(true);
+      console.warn('⚠️ AuthGuard: Loading state exceeded 5 seconds, proceeding anyway');
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [loading]);
   
   React.useEffect(() => {
     console.log('🛡️ AuthGuard useEffect triggered:', {
@@ -41,7 +57,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
       requireAuth
     });
     
-    if (!loading) {
+    if (!loading || loadingTimeout) {
       if (requireAuth && !isAuthenticated) {
         console.log('🔒 AuthGuard: User not authenticated, redirecting to:', redirectTo);
         router.push(redirectTo);
@@ -91,11 +107,14 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     }
   }, [isAuthenticated, user, loading, requireAuth, requiredRole, allowedRoles, router, redirectTo]);
 
-  // Show loading state
-  if (loading) {
+  // Show loading state (but timeout after 5 seconds)
+  if (loading && !loadingTimeout) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mb-4"></div>
+          <p className="text-gray-600">Loading...(max 5 seconds)</p>
+        </div>
       </div>
     );
   }
